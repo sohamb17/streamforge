@@ -3,6 +3,7 @@ module github.com/sohamb17/streamforge
 go 1.26.0
 
 require (
+	github.com/HdrHistogram/hdrhistogram-go v1.3.0
 	github.com/anishathalye/porcupine v1.3.1
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/parquet-go/parquet-go v0.32.0

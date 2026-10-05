@@ -79,6 +79,8 @@ const (
 	ServedFrom_SERVED_FROM_UNSPECIFIED ServedFrom = 0
 	ServedFrom_SERVED_FROM_CACHE       ServedFrom = 1
 	ServedFrom_SERVED_FROM_LEADER      ServedFrom = 2
+	// Some entities from the cache, the rest from the leader.
+	ServedFrom_SERVED_FROM_CACHE_AND_LEADER ServedFrom = 3
 )
 
 // Enum value maps for ServedFrom.
@@ -87,11 +89,13 @@ var (
 		0: "SERVED_FROM_UNSPECIFIED",
 		1: "SERVED_FROM_CACHE",
 		2: "SERVED_FROM_LEADER",
+		3: "SERVED_FROM_CACHE_AND_LEADER",
 	}
 	ServedFrom_value = map[string]int32{
-		"SERVED_FROM_UNSPECIFIED": 0,
-		"SERVED_FROM_CACHE":       1,
-		"SERVED_FROM_LEADER":      2,
+		"SERVED_FROM_UNSPECIFIED":      0,
+		"SERVED_FROM_CACHE":            1,
+		"SERVED_FROM_LEADER":           2,
+		"SERVED_FROM_CACHE_AND_LEADER": 3,
 	}
 )
 
@@ -353,12 +357,13 @@ const file_streamforge_v1_feature_proto_rawDesc = "" +
 	"\bReadMode\x12\x19\n" +
 	"\x15READ_MODE_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bREAD_MODE_BOUNDED_STALENESS\x10\x01\x12\x1a\n" +
-	"\x16READ_MODE_LINEARIZABLE\x10\x02*X\n" +
+	"\x16READ_MODE_LINEARIZABLE\x10\x02*z\n" +
 	"\n" +
 	"ServedFrom\x12\x1b\n" +
 	"\x17SERVED_FROM_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SERVED_FROM_CACHE\x10\x01\x12\x16\n" +
-	"\x12SERVED_FROM_LEADER\x10\x022h\n" +
+	"\x12SERVED_FROM_LEADER\x10\x02\x12 \n" +
+	"\x1cSERVED_FROM_CACHE_AND_LEADER\x10\x032h\n" +
 	"\x0eFeatureService\x12V\n" +
 	"\vGetFeatures\x12\".streamforge.v1.GetFeaturesRequest\x1a#.streamforge.v1.GetFeaturesResponseB9Z7github.com/sohamb17/streamforge/gen/streamforge/v1;sfv1b\x06proto3"
 

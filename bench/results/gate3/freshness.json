@@ -1,0 +1,1 @@
+{"window":"10m","batches":1884.8215619047621,"freshness_p50_s":0.0125243956431685,"freshness_p99_s":0.9772809669125315,"note":"Prometheus histogram quantiles (interpolated within buckets; bucket bounds 0.25ms*2^k). Cache hits add at most the cache TTL on top."}

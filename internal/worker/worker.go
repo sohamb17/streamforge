@@ -456,7 +456,13 @@ func (pr *proc) commit(b *sfv1.FeatureBatch) {
 				zones = append(zones, f.Zone)
 			}
 		}
-		c.Invalidate(ctx, zones)
+		// Off the commit path: a slow or dead Redis must never stall the
+		// pipeline. A lost invalidation is bounded by the cache TTL.
+		go func() {
+			ictx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			defer cancel()
+			c.Invalidate(ictx, zones)
+		}()
 	}
 	pr.done <- commitResult{batch: b, applied: applied}
 }

@@ -46,6 +46,8 @@ enum ServedFrom {
   SERVED_FROM_UNSPECIFIED = 0;
   SERVED_FROM_CACHE = 1;
   SERVED_FROM_LEADER = 2;
+  // Some entities from the cache, the rest from the leader.
+  SERVED_FROM_CACHE_AND_LEADER = 3;
 }
 
 message GetFeaturesResponse {

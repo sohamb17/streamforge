@@ -66,7 +66,10 @@ func main() {
 		cfg.History = h
 	}
 	if *redisAddr != "" {
-		cfg.Cache = &cache.Cache{R: redis.NewClient(&redis.Options{Addr: *redisAddr})}
+		cfg.Cache = &cache.Cache{R: redis.NewClient(&redis.Options{
+			Addr: *redisAddr, DialTimeout: 100 * time.Millisecond, ReadTimeout: 100 * time.Millisecond,
+			WriteTimeout: 100 * time.Millisecond, MaxRetries: -1, DialerRetries: 1, ContextTimeoutEnabled: true,
+		})}
 	}
 	w := worker.New(cfg)
 	opts := append([]kgo.Opt{kgo.SeedBrokers(*brokers), kgo.ClientID(*name)}, w.Options(*group)...)

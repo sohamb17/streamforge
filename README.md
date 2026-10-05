@@ -8,8 +8,8 @@ Postgres history for point-in-time-correct training data.
 Work in progress. Status by gate:
 
 - [x] Gate 1: single node, correct (see `bench/results/gate1/`)
-- [ ] Gate 2: Raft passes fault tests
-- [ ] Gate 3: end-to-end serving
+- [x] Gate 2: Raft passes fault tests (see `bench/results/faults/SUMMARY.md`, `bench/results/raft-sim/`)
+- [x] Gate 3: end-to-end serving (see `bench/results/gate3/`)
 - [ ] Gate 4: measured
 
 Quick checks:
@@ -18,4 +18,8 @@ Quick checks:
 go test ./...                     # unit, property and Raft simulation tests
 RAFTSIM_SEEDS=1000 go test ./internal/raftsim/ -run TestRandomizedFaults
 data/fetch.sh && scripts/gate1.sh # needs Docker
+
+docker compose -f deploy/compose/docker-compose.yml up -d --build
+faults/run-all.sh                 # crash, partition, pause, worker and Redis faults
+scripts/gate3.sh                  # serving, freshness, skew and parity checks
 ```

@@ -1,0 +1,1 @@
+{"features":[{"entityId":"161","found":true,"windowEndMs":"1772433240000","asOfEventTimeMs":"1772433240000","values":{"demand_spike_ratio":0.75,"distance_mean_15m":6.474545454545455,"fare_mean_15m":31.772727272727273,"trips_30m":19,"trips_5m":2,"trips_60m":32}}],"servedFrom":"SERVED_FROM_LEADER","stalenessBoundMs":"0"}

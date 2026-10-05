@@ -5,6 +5,8 @@
 //	                latest feature row per zone against the online store.
 //	verify backfill replay the log through the same window code and write
 //	                the rows to the "__backfill" feature view in Postgres.
+//	verify skew     sample online features, then check the point-in-time
+//	                join over the offline history returns the same rows.
 //	verify dump     print a fingerprint of the store's features and state.
 //	verify parity   compare the streaming history with the backfill, row by
 //	                row, for every window both have closed.
@@ -47,6 +49,7 @@ func main() {
 	pg := fs.String("postgres", "", "PostgreSQL DSN")
 	waitIdle := fs.Duration("wait-idle", 0, "wait until store offsets are unchanged for this long (0 = do not wait)")
 	timeout := fs.Duration("timeout", 30*time.Minute, "overall timeout")
+	skewFor := fs.Duration("sample-for", 30*time.Second, "skew: how long to sample the online store")
 	fs.Parse(os.Args[2:])
 
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
@@ -168,6 +171,62 @@ func main() {
 			"conflicting_rewrites": conflicts,
 		})
 		if r.Mismatched+r.MissingInStream+r.MissingInBackfill+conflicts > 0 || r.Matched == 0 {
+			os.Exit(1)
+		}
+	case "skew":
+		// Training/serving skew check: sample what the online store serves
+		// (linearizable reads) over time, then ask the offline history, via
+		// the point-in-time join, what a training row at that window end
+		// would contain. Every sample must match exactly.
+		if *pg == "" {
+			must(fmt.Errorf("-postgres required"))
+		}
+		h, err := history.Open(ctx, *pg, sql.FeatureHistory)
+		must(err)
+		var samples []window.Features
+		deadline := time.Now().Add(*skewFor)
+		for time.Now().Before(deadline) {
+			rows, _, err := sc.ZoneFeatures(ctx, nil)
+			must(err)
+			for i := 0; i < 5 && len(rows) > 0; i++ {
+				samples = append(samples, store.FeaturesFromProto(rows[(len(samples)*7+i*31)%len(rows)]))
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+		_, err = h.Pool.Exec(ctx, `DELETE FROM training_labels`)
+		must(err)
+		for _, f := range samples {
+			_, err := h.Pool.Exec(ctx, `INSERT INTO training_labels (zone, label_time) VALUES ($1, to_timestamp($2/1000.0)) ON CONFLICT DO NOTHING`, f.Zone, f.WindowEndMs)
+			must(err)
+		}
+		rows, err := h.Pool.Query(ctx, history.PointInTimeSQL, history.View)
+		must(err)
+		joined := map[[2]int64]window.Features{}
+		for rows.Next() {
+			var zone int32
+			var lt, we time.Time
+			var label *float64
+			var f window.Features
+			var weNull *time.Time
+			must(rows.Scan(&zone, &lt, &label, &weNull, &f.Trips5m, &f.Trips30m, &f.Trips60m, &f.Count15m, &f.FareCents15m, &f.DistanceMilli15m))
+			if weNull != nil {
+				we = *weNull
+				f.Zone, f.WindowEndMs = zone, we.UnixMilli()
+			}
+			joined[[2]int64{int64(zone), lt.UnixMilli()}] = f
+		}
+		must(rows.Err())
+		var match, mismatch int
+		for _, f := range samples {
+			if joined[[2]int64{int64(f.Zone), f.WindowEndMs}] == f {
+				match++
+			} else {
+				mismatch++
+				fmt.Fprintf(os.Stderr, "skew: zone %d at %d: online %+v offline %+v\n", f.Zone, f.WindowEndMs, f, joined[[2]int64{int64(f.Zone), f.WindowEndMs}])
+			}
+		}
+		emit(map[string]any{"online_samples": len(samples), "point_in_time_matches": match, "mismatches": mismatch})
+		if mismatch > 0 || match == 0 {
 			os.Exit(1)
 		}
 	case "dump":
