@@ -1,0 +1,8 @@
+[
+  {
+    "fault": "kill follower node 1 (leader is 2)",
+    "at_s": 8.493,
+    "write_unavailable_ms": 22.657705000000306,
+    "gap_start_s": 17.619886016
+  }
+]

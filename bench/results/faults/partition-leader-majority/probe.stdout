@@ -1,0 +1,12 @@
+{
+  "ops": 64470,
+  "puts_ok": 32272,
+  "puts_unknown": 0,
+  "gets_ok": 32198,
+  "gets_failed": 0,
+  "linearizable": "ok",
+  "check_seconds": 0.109447938,
+  "max_write_gap_ms": 29.505018,
+  "max_write_gap_starts_at_s": 36.932766929,
+  "write_gaps_over_1s": 0
+}

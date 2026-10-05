@@ -1,0 +1,6 @@
+## after convergence (replayer paused)
+node 1: role=follower term=6 commit=297668 applied=297668 snap_installed=1 fingerprint=d823a73aa5bc2d5f
+node 2: role=leader term=6 commit=297668 applied=297668 snap_installed=6 fingerprint=d823a73aa5bc2d5f
+node 3: role=follower term=6 commit=297668 applied=297668 snap_installed=2 fingerprint=d823a73aa5bc2d5f
+node 4: role=follower term=6 commit=297668 applied=297668 snap_installed=1 fingerprint=d823a73aa5bc2d5f
+node 5: role=follower term=6 commit=297668 applied=297668 snap_installed=2 fingerprint=d823a73aa5bc2d5f

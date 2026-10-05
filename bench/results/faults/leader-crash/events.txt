@@ -1,0 +1,5 @@
+1791177986574 scenario leader-crash starting; leader is 5
+1791177998135 FAULT kill leader node 5
+1791177999478 new leader is node 2
+1791178019486 restart node 5
+1791178040241 CONVERGED: all nodes report the same applied index and state fingerprint

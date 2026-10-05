@@ -1,0 +1,12 @@
+## before
+node 1: role=follower term=5 commit=236895 applied=236895 snap_installed=5 fingerprint=b86862df3e100cfe
+node 2: role=follower term=5 commit=237019 applied=237019 snap_installed=6 fingerprint=b9410fc4134f1b51
+node 3: role=follower term=5 commit=237091 applied=237091 snap_installed=2 fingerprint=fd0125f3ccea0ffe
+node 4: role=follower term=5 commit=237161 applied=237161 snap_installed=1 fingerprint=061238b9a35e030a
+node 5: role=leader term=5 commit=237267 applied=237267 snap_installed=3 fingerprint=251171cc0f37e3cc
+## after convergence (replayer paused)
+node 1: role=follower term=6 commit=262589 applied=262589 snap_installed=5 fingerprint=5e1de969e45d1b55
+node 2: role=leader term=6 commit=262589 applied=262589 snap_installed=6 fingerprint=5e1de969e45d1b55
+node 3: role=follower term=6 commit=262589 applied=262589 snap_installed=2 fingerprint=5e1de969e45d1b55
+node 4: role=follower term=6 commit=262589 applied=262589 snap_installed=1 fingerprint=5e1de969e45d1b55
+node 5: role=follower term=6 commit=262589 applied=262589 snap_installed=2 fingerprint=5e1de969e45d1b55

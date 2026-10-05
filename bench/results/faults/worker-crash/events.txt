@@ -1,0 +1,7 @@
+1791178269767 scenario worker-crash starting; leader is 4
+1791178275771 FAULT kill worker1 (1)
+1791178283050 FAULT kill worker1 (2)
+1791178290329 FAULT kill worker1 (3)
+1791178291645 FAULT redeliver on worker2 (re-send last batch, rewind 2000 offsets)
+{"partitions":[3,4]}1791178296893 worker2: 4 duplicate batch(es) ignored by the store, 8000 redelivered record(s) skipped by the offset guard
+1791178296894 pausing replayer; waiting for workers to go idle

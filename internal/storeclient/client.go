@@ -256,3 +256,18 @@ func (c *Client) Status(ctx context.Context, node uint64) (*sfv1.NodeStatus, err
 	}
 	return resp.Status, nil
 }
+
+// GetLocal reads a register from one node's local state machine with no
+// consistency guarantee. It exists for the negative-control experiment that
+// shows the linearizability checker does catch stale reads.
+func (c *Client) GetLocal(ctx context.Context, node uint64, key string) (string, bool, error) {
+	cli, ok := c.conns[node]
+	if !ok {
+		return "", false, fmt.Errorf("unknown node %d", node)
+	}
+	resp, err := cli.Get(ctx, &sfv1.GetRequest{Key: key})
+	if err != nil {
+		return "", false, err
+	}
+	return resp.Value, resp.Found, nil
+}

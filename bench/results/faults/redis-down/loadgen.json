@@ -1,0 +1,63 @@
+{
+  "achieved_send_rps": 500.0238037879486,
+  "batch": 10,
+  "by_served_from": {
+    "SERVED_FROM_CACHE": {
+      "count": 1242,
+      "max_ms": 46.111,
+      "mean_ms": 1.7981859903381636,
+      "p50_ms": 1.138,
+      "p90_ms": 3.813,
+      "p999_ms": 36.191,
+      "p99_ms": 9.719
+    },
+    "SERVED_FROM_CACHE_AND_LEADER": {
+      "count": 10176,
+      "max_ms": 62.015,
+      "mean_ms": 3.91235603380503,
+      "p50_ms": 2.743,
+      "p90_ms": 7.403,
+      "p999_ms": 39.007,
+      "p99_ms": 17.983
+    },
+    "SERVED_FROM_LEADER": {
+      "count": 8582,
+      "max_ms": 138.879,
+      "mean_ms": 4.6362227918900025,
+      "p50_ms": 2.381,
+      "p90_ms": 8.051,
+      "p999_ms": 114.367,
+      "p99_ms": 41.439
+    }
+  },
+  "codes": {
+    "OK": 20000
+  },
+  "conns": 4,
+  "cpus": 2,
+  "deadline_ms": 200,
+  "duration_s": 40,
+  "errors_by_second": {},
+  "finished_at": "2026-10-05T05:48:31Z",
+  "host": "3efcb655f38a",
+  "label": "redis-down",
+  "late_sends_10ms": 33,
+  "latency_from": "scheduled send time (coordinated-omission corrected)",
+  "max_inflight": 61,
+  "mode": "bounded",
+  "open_loop": true,
+  "overall": {
+    "count": 20000,
+    "max_ms": 138.879,
+    "mean_ms": 4.091677300000003,
+    "p50_ms": 2.455,
+    "p90_ms": 7.579,
+    "p999_ms": 91.327,
+    "p99_ms": 26.159
+  },
+  "rate_rps": 500,
+  "requests": 20000,
+  "target": "server:50051",
+  "warmup_s": 2,
+  "zipf": 1.2
+}

@@ -1,0 +1,12 @@
+## 2 s after unpause
+node 1: role=follower term=8 commit=376931 applied=376931 snap_installed=3 fingerprint=bd01aab3971783b2
+node 2: role=follower term=8 commit=377001 applied=377001 snap_installed=9 fingerprint=8f15da3e64463d75
+node 3: role=follower term=8 commit=377047 applied=377047 snap_installed=3 fingerprint=2b2420e5af139f78
+node 4: role=leader term=8 commit=377094 applied=377094 snap_installed=1 fingerprint=2ba76ebd8152de92
+node 5: role=follower term=8 commit=377182 applied=377182 snap_installed=5 fingerprint=0098cbe2a83d1b56
+## after convergence (replayer paused)
+node 1: role=follower term=8 commit=388840 applied=388840 snap_installed=3 fingerprint=c23c2a95ce519b0c
+node 2: role=follower term=8 commit=388840 applied=388840 snap_installed=9 fingerprint=c23c2a95ce519b0c
+node 3: role=follower term=8 commit=388840 applied=388840 snap_installed=3 fingerprint=c23c2a95ce519b0c
+node 4: role=leader term=8 commit=388840 applied=388840 snap_installed=1 fingerprint=c23c2a95ce519b0c
+node 5: role=follower term=8 commit=388840 applied=388840 snap_installed=5 fingerprint=c23c2a95ce519b0c

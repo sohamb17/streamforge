@@ -1,0 +1,7 @@
+{
+  "events_replayed": 66941,
+  "feature_mismatches": 0,
+  "partition_state_mismatches": 0,
+  "partitions": 6,
+  "zones_checked": 234
+}

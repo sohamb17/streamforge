@@ -1,0 +1,4 @@
+1791179269390 scenario redis-down starting; leader is 5
+1791179281393 FAULT stop redis
+1791179296610 start redis
+1791179312010 request outcomes during the run: "codes":{"OK":20000}

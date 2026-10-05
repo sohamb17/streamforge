@@ -1,0 +1,5 @@
+1791178043277 scenario follower-restart starting; leader is 2
+1791178052220 FAULT kill follower node 1 (leader is 2)
+1791178082375 restart follower node 1
+1791178101886 CONVERGED: all nodes report the same applied index and state fingerprint
+1791178101967 follower 1 installed 1 snapshot(s) from the leader

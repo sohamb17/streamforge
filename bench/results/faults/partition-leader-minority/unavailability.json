@@ -1,0 +1,8 @@
+[
+  {
+    "fault": "partition minority=[2 1] majority=[3 4 5] (leader was 2)",
+    "at_s": 10.256,
+    "write_unavailable_ms": 541.9977570000008,
+    "gap_start_s": 11.582104139
+  }
+]

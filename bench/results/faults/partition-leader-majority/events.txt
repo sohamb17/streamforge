@@ -1,0 +1,7 @@
+1791178161657 scenario partition-leader-majority starting; leader is 5
+1791178172523 FAULT partition minority=[1 2] majority=[5 3 4] (leader was 5)
+1791178197966 minority node 1 commit index unchanged at 334991 (cannot commit)
+1791178198063 minority node 2 commit index unchanged at 335945 (cannot commit)
+1791178198655 majority leader is 5
+1791178198659 heal partition
+1791178215264 CONVERGED: all nodes report the same applied index and state fingerprint

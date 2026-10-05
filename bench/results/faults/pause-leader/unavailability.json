@@ -1,0 +1,8 @@
+[
+  {
+    "fault": "pause leader node 5",
+    "at_s": 10.381,
+    "write_unavailable_ms": 1027.5317309999998,
+    "gap_start_s": 10.43771312
+  }
+]

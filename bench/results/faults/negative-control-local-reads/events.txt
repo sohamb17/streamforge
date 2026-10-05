@@ -1,0 +1,4 @@
+1791178336266 scenario negative-control-local-reads starting; leader is 4
+1791178346800 FAULT partition minority=[4 1] majority=[2 3 5], reads served from local state
+1791178361244 heal partition
+1791178366922 EXPECTED: checker rejected the history ("linearizable": "illegal")

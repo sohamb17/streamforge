@@ -1,0 +1,5 @@
+1791178218262 scenario pause-leader starting; leader is 5
+1791178229118 FAULT pause leader node 5
+1791178230078 new leader is node 4
+1791178242092 unpause node 5
+1791178266737 CONVERGED: all nodes report the same applied index and state fingerprint

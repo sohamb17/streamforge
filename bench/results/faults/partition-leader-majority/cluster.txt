@@ -1,0 +1,18 @@
+## 2 s into partition
+node 1: role=pre-candidate term=7 commit=334991 applied=334991 snap_installed=2 fingerprint=eb1d77e0b6590978
+node 2: role=pre-candidate term=7 commit=335945 applied=335945 snap_installed=8 fingerprint=8a4e59f79c24f7f9
+node 3: role=follower term=7 commit=338657 applied=338657 snap_installed=3 fingerprint=117019742d9f4554
+node 4: role=follower term=7 commit=338730 applied=338730 snap_installed=1 fingerprint=cc54c5c9f6e3dfdd
+node 5: role=leader term=7 commit=338843 applied=338843 snap_installed=2 fingerprint=473b37959e67209a
+## 20 s into partition
+node 1: role=pre-candidate term=7 commit=334991 applied=334991 snap_installed=2 fingerprint=eb1d77e0b6590978
+node 2: role=pre-candidate term=7 commit=335945 applied=335945 snap_installed=8 fingerprint=8a4e59f79c24f7f9
+node 3: role=follower term=7 commit=352339 applied=352339 snap_installed=3 fingerprint=6245136f70b851dd
+node 4: role=follower term=7 commit=352402 applied=352402 snap_installed=1 fingerprint=d8ad19ac5d80bb58
+node 5: role=leader term=7 commit=352481 applied=352481 snap_installed=2 fingerprint=4022e37fb94881fb
+## after convergence (replayer paused)
+node 1: role=follower term=7 commit=361339 applied=361339 snap_installed=3 fingerprint=a590c4abe526a70f
+node 2: role=follower term=7 commit=361339 applied=361339 snap_installed=9 fingerprint=a590c4abe526a70f
+node 3: role=follower term=7 commit=361339 applied=361339 snap_installed=3 fingerprint=a590c4abe526a70f
+node 4: role=follower term=7 commit=361339 applied=361339 snap_installed=1 fingerprint=a590c4abe526a70f
+node 5: role=leader term=7 commit=361339 applied=361339 snap_installed=2 fingerprint=a590c4abe526a70f

@@ -1,0 +1,136 @@
+# StreamForge: the whole system on one machine.
+#
+#   docker compose -f deploy/compose/docker-compose.yml up -d --build
+#
+# Grafana http://localhost:3000 .
+# Prometheus http://localhost:9090 . FeatureService gRPC localhost:50051 .
+
+name: streamforge
+
+x-sf: &sf
+  image: streamforge:dev
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "3" }
+
+x-store: &store
+  <<: *sf
+  cap_add: [NET_ADMIN]          # lets faults/partition.sh install iptables rules
+  environment:
+    PEERS: 1=storenode1:7000,2=storenode2:7000,3=storenode3:7000,4=storenode4:7000,5=storenode5:7000
+
+x-worker: &worker
+  <<: *sf
+  depends_on: [kafka, storenode1, storenode2, storenode3, storenode4, storenode5, postgres, redis]
+  command: >
+    worker -brokers kafka:9092 -topic trips
+    -store ${STORE_PEERS:-1=storenode1:7000,2=storenode2:7000,3=storenode3:7000,4=storenode4:7000,5=storenode5:7000}
+    -postgres postgres://streamforge:streamforge@postgres:5432/streamforge
+    -redis redis:6379
+
+services:
+  kafka:
+    image: apache/kafka:4.1.0
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_LOG_RETENTION_HOURS: 72
+      KAFKA_HEAP_OPTS: -Xms384m -Xmx384m
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    ports: ["29092:29092"]
+    volumes: [kafka:/var/lib/kafka/data]
+
+  storenode1: { <<: *store, hostname: storenode1, command: sh -c 'storenode -id 1 -peers $$PEERS -data /data', volumes: [raft1:/data] }
+  storenode2: { <<: *store, hostname: storenode2, command: sh -c 'storenode -id 2 -peers $$PEERS -data /data', volumes: [raft2:/data] }
+  storenode3: { <<: *store, hostname: storenode3, command: sh -c 'storenode -id 3 -peers $$PEERS -data /data', volumes: [raft3:/data] }
+  storenode4: { <<: *store, hostname: storenode4, command: sh -c 'storenode -id 4 -peers $$PEERS -data /data', volumes: [raft4:/data] }
+  storenode5: { <<: *store, hostname: storenode5, command: sh -c 'storenode -id 5 -peers $$PEERS -data /data', volumes: [raft5:/data] }
+
+  worker1: { <<: *worker, hostname: worker1 }
+  worker2: { <<: *worker, hostname: worker2 }
+
+  replayer:
+    <<: *sf
+    depends_on: [kafka]
+    command: >
+      replayer -brokers kafka:9092 -topic trips -partitions 6
+      -source ${REPLAY_SOURCE:-tlc} -tlc-file /data/yellow_tripdata_2026-03.parquet -tlc-month 2026-03
+      -speedup ${REPLAY_SPEEDUP:-60} -loop -late-fraction 0.002
+    volumes: [../../data:/data:ro]
+
+  server:
+    <<: *sf
+    depends_on: [storenode1, redis]
+    command: >
+      server -listen :50051 -http :8081
+      -store 1=storenode1:7000,2=storenode2:7000,3=storenode3:7000,4=storenode4:7000,5=storenode5:7000
+      -redis redis:6379 -cache-ttl 2s
+    ports: ["50051:50051"]
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: streamforge
+      POSTGRES_PASSWORD: streamforge
+      POSTGRES_DB: streamforge
+    ports: ["5432:5432"]
+    volumes: [pg:/var/lib/postgresql/data]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom:/prometheus
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    restart: unless-stopped
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000/}
+      GF_SERVER_SERVE_FROM_SUB_PATH: ${GRAFANA_SUB_PATH:-false}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/streamforge.json
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+
+  # One-off tools (probe, verify, loadgen): docker compose run --rm tools <cmd>
+  tools:
+    <<: *sf
+    restart: "no"
+    profiles: [tools]
+    volumes: [../../bench/results:/results, ../../data:/data:ro]
+
+volumes: { kafka: {}, raft1: {}, raft2: {}, raft3: {}, raft4: {}, raft5: {}, pg: {}, prom: {} }
