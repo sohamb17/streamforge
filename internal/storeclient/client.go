@@ -27,10 +27,11 @@ const leaderTrailer = "sf-leader"
 
 // Client talks to the store cluster.
 type Client struct {
-	ids    []uint64
-	conns  map[uint64]sfv1.StoreServiceClient
-	leader atomic.Uint64
-	next   atomic.Uint64
+	closers []*grpc.ClientConn
+	ids     []uint64
+	conns   map[uint64]sfv1.StoreServiceClient
+	leader  atomic.Uint64
+	next    atomic.Uint64
 
 	clientID string
 	putMu    sync.Mutex // one outstanding Put per client id (see Put)
@@ -51,6 +52,7 @@ func New(addrs map[uint64]string, clientID string) (*Client, error) {
 			return nil, err
 		}
 		c.conns[id] = sfv1.NewStoreServiceClient(conn)
+		c.closers = append(c.closers, conn)
 		c.ids = append(c.ids, id)
 	}
 	for i := range c.ids {
@@ -270,4 +272,26 @@ func (c *Client) GetLocal(ctx context.Context, node uint64, key string) (string,
 		return "", false, err
 	}
 	return resp.Value, resp.Found, nil
+}
+
+// Close releases the connections.
+func (c *Client) Close() {
+	for _, cc := range c.closers {
+		cc.Close()
+	}
+}
+
+// Purge deletes every register with the given key prefix (and dedup
+// records of client ids with that prefix). Retrying is safe: it is
+// idempotent.
+func (c *Client) Purge(ctx context.Context, prefix string) (uint64, error) {
+	var n uint64
+	err := c.call(ctx, true, func(ctx context.Context, cli sfv1.StoreServiceClient, o ...grpc.CallOption) error {
+		resp, err := cli.Purge(ctx, &sfv1.PurgeRequest{Prefix: prefix}, o...)
+		if err == nil {
+			n = resp.Deleted
+		}
+		return err
+	})
+	return n, err
 }

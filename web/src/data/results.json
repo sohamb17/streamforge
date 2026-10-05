@@ -1,0 +1,16 @@
+{
+  "note": "Measured on the full Docker stack, with all 15 containers sharing one 2-vCPU machine. Conditions for every number are in bench/results/gate4/REPORT.md; correctness results are in bench/results/.",
+  "rows": [
+    { "what": "Ingest, consumer lag flat", "value": "250,000 events/s", "how": "10-minute run, synthetic stream at wall-clock event time; about 1 CPU core in total" },
+    { "what": "Freshness (event published → features committed in Raft)", "value": "p50 34 ms · p99 63 ms", "how": "same 250k events/s run" },
+    { "what": "Freshness under commit-path stress", "value": "p99 124 ms", "how": "real March 2026 trips replayed at 8,000 events/s (5,442x event-time speed-up), 5-node Raft" },
+    { "what": "Linearizable GetFeatures", "value": "p99 13.2 ms · 0 errors", "how": "open-loop 1,000 req/s, ReadIndex on the 5-node leader, 100 ms deadline" },
+    { "what": "Cached GetFeatures (bounded staleness)", "value": "p99 21.6 ms · 0 errors", "how": "open-loop 2,000 req/s, Redis with 2 s TTL, after adding request coalescing (p99 was 33.1 ms)" },
+    { "what": "Raft writes, fsync on a majority", "value": "1,718 writes/s · p99 24.6 ms", "how": "5 nodes, 32 closed-loop clients (5,047/s on 1 node)" },
+    { "what": "Write unavailability after SIGKILL of the leader", "value": "median 381 ms", "how": "5 runs, 360 to 521 ms; election timeout 300 to 600 ms" },
+    { "what": "Effectively-once under worker crashes", "value": "0 mismatches", "how": "1M real trips, 4 worker kills; served features equal a recomputation from the Kafka log" },
+    { "what": "Linearizability under faults", "value": "all histories pass", "how": "Porcupine on 55k to 69k ops per run: leader kill, pause, iptables partitions; a negative control is rejected" },
+    { "what": "Randomized Raft simulation", "value": "1,500 schedules pass", "how": "4 of 4 re-inserted classic Raft bugs are caught" },
+    { "what": "Training/serving parity", "value": "294,543 rows equal", "how": "streaming history vs. backfill from offset 0; 300/300 point-in-time joins match online reads" }
+  ]
+}

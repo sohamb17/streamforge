@@ -1,7 +1,6 @@
 package raftsim
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -18,196 +17,6 @@ import (
 	"github.com/sohamb17/streamforge/internal/store"
 	"github.com/sohamb17/streamforge/internal/window"
 )
-
-// clock orders client events more finely than ticks.
-type clock struct{ t int64 }
-
-func (c *clock) now() int64 { c.t++; return c.t }
-
-type clientOp struct {
-	in       linz.Input
-	call     int64
-	deadline int
-	waiting  bool
-	retryAt  int
-}
-
-// client issues register operations against the cluster, retrying on the
-// leader it learns about, and records a history for Porcupine.
-type client struct {
-	id      int
-	name    string
-	seq     uint64
-	guess   uint64
-	cur     *clientOp
-	history []porcupine.Operation
-}
-
-func (cl *client) tick(c *Cluster, rng *rand.Rand, clk *clock, active bool) {
-	if cl.cur == nil {
-		if !active || rng.Intn(3) != 0 {
-			return
-		}
-		key := fmt.Sprintf("k%d", rng.Intn(3))
-		in := linz.Input{Op: linz.OpGet, Key: key}
-		if rng.Intn(2) == 0 {
-			cl.seq++
-			in = linz.Input{Op: linz.OpPut, Key: key, Value: fmt.Sprintf("%s-%d", cl.name, cl.seq)}
-		}
-		cl.cur = &clientOp{in: in, call: clk.now(), deadline: c.Now + 80}
-	}
-	op := cl.cur
-	if op.waiting || c.Now < op.retryAt {
-		return
-	}
-	if c.Now > op.deadline {
-		if op.in.Op == linz.OpPut {
-			cl.record(op, linz.Output{Unknown: true}, linz.Infinity)
-		}
-		cl.cur = nil
-		return
-	}
-	if cl.guess == 0 || !c.Nodes[cl.guess].Up {
-		cl.guess = c.ids[rng.Intn(len(c.ids))]
-	}
-	target := cl.guess
-	var err error
-	op.waiting = true
-	if op.in.Op == linz.OpPut {
-		cmd := &sfv1.Command{ClientId: cl.name, Seq: cl.seq, Op: &sfv1.Command_Put{Put: &sfv1.PutOp{Key: op.in.Key, Value: op.in.Value}}}
-		data, _ := store.EncodeCommand(cmd)
-		err = c.Propose(target, data, func(_ store.Result, ok bool) {
-			op.waiting = false
-			if ok {
-				cl.record(op, linz.Output{}, clk.now())
-				cl.cur = nil
-			} else {
-				op.retryAt = c.Now + 1 // unknown: retry with the same seq
-			}
-		})
-	} else {
-		err = c.Read(target, func(ok bool) {
-			op.waiting = false
-			if ok {
-				v, found := c.Nodes[target].SM.Get(op.in.Key)
-				cl.record(op, linz.Output{Value: v, Found: found}, clk.now())
-				cl.cur = nil
-			} else {
-				op.retryAt = c.Now + 1
-			}
-		})
-	}
-	if err != nil {
-		op.waiting = false
-		op.retryAt = c.Now + 1
-		var nl *raft.NotLeaderError
-		if errors.As(err, &nl) && nl.Lead != 0 {
-			cl.guess = nl.Lead
-		} else {
-			cl.guess = 0
-		}
-	}
-}
-
-func (cl *client) record(op *clientOp, out linz.Output, ret int64) {
-	cl.history = append(cl.history, porcupine.Operation{ClientId: cl.id, Input: op.in, Call: op.call, Output: out, Return: ret})
-}
-
-// worker emulates a stream worker: it windows events, proposes batches with
-// their offsets, and on any unknown outcome or random crash restores its
-// state from the store (linearizable read) and resumes from the stored
-// offset, exactly as cmd/worker does.
-type worker struct {
-	events    []window.Event
-	p         *window.Partition
-	next      int
-	inflight  *window.Batch
-	waiting   bool
-	restoring bool
-	guess     uint64
-	seq       uint64
-	restores  int
-}
-
-func (w *worker) done() bool {
-	return w.next >= len(w.events) && w.inflight == nil && !w.restoring && !w.waiting
-}
-
-func (w *worker) tick(c *Cluster, rng *rand.Rand) {
-	if w.waiting {
-		return
-	}
-	if w.guess == 0 || !c.Nodes[w.guess].Up {
-		w.guess = c.ids[rng.Intn(len(c.ids))]
-	}
-	target := w.guess
-	onErr := func(err error) {
-		var nl *raft.NotLeaderError
-		if errors.As(err, &nl) && nl.Lead != 0 {
-			w.guess = nl.Lead
-		} else {
-			w.guess = 0
-		}
-	}
-	if w.restoring {
-		w.waiting = true
-		if err := c.Read(target, func(ok bool) {
-			w.waiting = false
-			if ok {
-				st := c.Nodes[target].SM.PartitionState(0)
-				w.p = window.Restore(st, window.DefaultConfig())
-				w.next = int(st.ToOffset) + 1
-				w.restoring = false
-				w.restores++
-			}
-		}); err != nil {
-			w.waiting = false
-			onErr(err)
-		}
-		return
-	}
-	if rng.Intn(200) == 0 {
-		// Worker process crash: lose everything not committed.
-		w.inflight = nil
-		w.restoring = true
-		return
-	}
-	if w.inflight == nil {
-		for i := 0; i < 15 && w.next < len(w.events); i++ {
-			w.p.Add(w.events[w.next])
-			w.next++
-			if w.p.HasOutput() {
-				b := w.p.Flush()
-				w.inflight = &b
-				break
-			}
-		}
-		if w.inflight == nil {
-			return
-		}
-	}
-	w.seq++
-	cmd := &sfv1.Command{ClientId: "worker-0", Seq: w.seq, Op: &sfv1.Command_Batch{Batch: store.BatchToProto(*w.inflight)}}
-	data, _ := store.EncodeCommand(cmd)
-	w.waiting = true
-	if err := c.Propose(target, data, func(_ store.Result, ok bool) {
-		w.waiting = false
-		if ok {
-			w.inflight = nil
-		} else if rng.Intn(2) == 0 {
-			// Unknown outcome: blindly re-propose the same batch. If the
-			// first attempt did commit, the store must ignore this one.
-			w.guess = 0
-		} else {
-			// Or: do not guess, rebuild from what the store says.
-			w.inflight = nil
-			w.restoring = true
-		}
-	}); err != nil {
-		w.waiting = false
-		onErr(err)
-	}
-}
 
 func genEvents(rng *rand.Rand, n int) []window.Event {
 	evs := make([]window.Event, n)
@@ -300,13 +109,14 @@ func runScenario(t *testing.T, seed int64, ch churn) {
 	cfg.MaxDelay = 1 + rng.Intn(3)
 	cfg.SnapshotEvery = uint64(30 + rng.Intn(100))
 	c := New(cfg)
-	clk := &clock{}
-	var clients []*client
+	clk := &Clock{}
+	var clients []*Client
 	for i := 0; i < 4; i++ {
-		clients = append(clients, &client{id: i, name: fmt.Sprintf("c%d", i)})
+		clients = append(clients, &Client{ID: i, Name: fmt.Sprintf("c%d", i)})
 	}
 	evs := genEvents(rng, 2500)
-	w := &worker{events: evs, p: window.NewPartition(0, window.DefaultConfig())}
+	w := NewWorker(0, &evs, 15)
+	w.CrashRate = 200
 
 	const faultTicks = 2500
 	for i := 0; i < faultTicks; i++ {
@@ -339,9 +149,9 @@ func runScenario(t *testing.T, seed int64, ch churn) {
 			c.Heal()
 		}
 		for _, cl := range clients {
-			cl.tick(c, rng, clk, true)
+			cl.Tick(c, rng, clk, true)
 		}
-		w.tick(c, rng)
+		w.Tick(c, rng)
 		c.Step()
 	}
 	// Heal everything and let the system finish.
@@ -350,11 +160,11 @@ func runScenario(t *testing.T, seed int64, ch churn) {
 	for _, id := range c.ids {
 		c.Restart(id)
 	}
-	for i := 0; i < 4000 && !(w.done() && allIdle(clients) && c.Converged() && i > 200); i++ {
+	for i := 0; i < 4000 && !(w.Done() && allIdle(clients) && c.Converged() && i > 200); i++ {
 		for _, cl := range clients {
-			cl.tick(c, rng, clk, false)
+			cl.Tick(c, rng, clk, false)
 		}
-		w.tick(c, rng)
+		w.Tick(c, rng)
 		c.Step()
 	}
 
@@ -364,8 +174,8 @@ func runScenario(t *testing.T, seed int64, ch churn) {
 	if !c.Converged() || !c.StatesEqual() {
 		t.Fatalf("cluster did not converge after healing")
 	}
-	if !w.done() {
-		t.Fatalf("worker did not finish: next=%d/%d restoring=%v", w.next, len(evs), w.restoring)
+	if !w.Done() {
+		t.Fatalf("worker did not finish: offset=%d/%d restoring=%v", w.Offset(), len(evs), w.restoring)
 	}
 	want := latestPerZone(evs)
 	for _, id := range c.ids {
@@ -377,8 +187,8 @@ func runScenario(t *testing.T, seed int64, ch churn) {
 	var hist []porcupine.Operation
 	completed := 0
 	for _, cl := range clients {
-		hist = append(hist, cl.history...)
-		for _, op := range cl.history {
+		hist = append(hist, cl.History...)
+		for _, op := range cl.History {
 			if op.Return != linz.Infinity {
 				completed++
 			}
@@ -394,12 +204,12 @@ func runScenario(t *testing.T, seed int64, ch churn) {
 		t.Fatalf("history not linearizable (%v); visualization: %s", res, f.Name())
 	}
 	t.Logf("seed %d: %d ops (%d completed), %d worker restores, %d duplicate batches ignored, %d elections, final term %d",
-		seed, len(hist), completed, w.restores, c.Nodes[1].SM.DuplicateBatches, totalElections(c), c.Nodes[c.Leader()].Core.Status().Term)
+		seed, len(hist), completed, w.Restores, c.Nodes[1].SM.DuplicateBatches, totalElections(c), c.Nodes[c.Leader()].Core.Status().Term)
 }
 
-func allIdle(cs []*client) bool {
+func allIdle(cs []*Client) bool {
 	for _, c := range cs {
-		if c.cur != nil {
+		if !c.Idle() {
 			return false
 		}
 	}

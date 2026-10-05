@@ -185,11 +185,19 @@ func TestClusterPutGetFailoverAndCatchUp(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
+	// Every node, including the restarted old leader, must converge.
 	for _, id := range c.ids {
-		var v string
-		c.nodes[id].node.View(func(sm *store.SM) { v, _ = sm.Get("k") })
-		if v != "159" {
-			t.Fatalf("node %d has k=%q after catch-up", id, v)
+		deadline := time.Now().Add(10 * time.Second)
+		for {
+			var v string
+			c.nodes[id].node.View(func(sm *store.SM) { v, _ = sm.Get("k") })
+			if v == "159" {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("node %d has k=%q after catch-up", id, v)
+			}
+			time.Sleep(20 * time.Millisecond)
 		}
 	}
 }

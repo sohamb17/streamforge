@@ -29,6 +29,7 @@ type Command struct {
 	//
 	//	*Command_Put
 	//	*Command_Batch
+	//	*Command_Purge
 	Op            isCommand_Op `protobuf_oneof:"op"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -103,6 +104,15 @@ func (x *Command) GetBatch() *FeatureBatch {
 	return nil
 }
 
+func (x *Command) GetPurge() *PurgeOp {
+	if x != nil {
+		if x, ok := x.Op.(*Command_Purge); ok {
+			return x.Purge
+		}
+	}
+	return nil
+}
+
 type isCommand_Op interface {
 	isCommand_Op()
 }
@@ -115,9 +125,63 @@ type Command_Batch struct {
 	Batch *FeatureBatch `protobuf:"bytes,11,opt,name=batch,proto3,oneof"`
 }
 
+type Command_Purge struct {
+	Purge *PurgeOp `protobuf:"bytes,12,opt,name=purge,proto3,oneof"`
+}
+
 func (*Command_Put) isCommand_Op() {}
 
 func (*Command_Batch) isCommand_Op() {}
+
+func (*Command_Purge) isCommand_Op() {}
+
+// PurgeOp deletes every register whose key starts with prefix, and the
+// deduplication records of client ids starting with prefix. The live
+// dashboard's linearizability probe uses a fresh prefix per checked window
+// and purges it afterwards, so its keys do not accumulate forever.
+type PurgeOp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prefix        string                 `protobuf:"bytes,1,opt,name=prefix,proto3" json:"prefix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeOp) Reset() {
+	*x = PurgeOp{}
+	mi := &file_streamforge_v1_store_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeOp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeOp) ProtoMessage() {}
+
+func (x *PurgeOp) ProtoReflect() protoreflect.Message {
+	mi := &file_streamforge_v1_store_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeOp.ProtoReflect.Descriptor instead.
+func (*PurgeOp) Descriptor() ([]byte, []int) {
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *PurgeOp) GetPrefix() string {
+	if x != nil {
+		return x.Prefix
+	}
+	return ""
+}
 
 type PutOp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -129,7 +193,7 @@ type PutOp struct {
 
 func (x *PutOp) Reset() {
 	*x = PutOp{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[1]
+	mi := &file_streamforge_v1_store_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -141,7 +205,7 @@ func (x *PutOp) String() string {
 func (*PutOp) ProtoMessage() {}
 
 func (x *PutOp) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[1]
+	mi := &file_streamforge_v1_store_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -154,7 +218,7 @@ func (x *PutOp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutOp.ProtoReflect.Descriptor instead.
 func (*PutOp) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{1}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *PutOp) GetKey() string {
@@ -186,7 +250,7 @@ type Bucket struct {
 
 func (x *Bucket) Reset() {
 	*x = Bucket{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[2]
+	mi := &file_streamforge_v1_store_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -198,7 +262,7 @@ func (x *Bucket) String() string {
 func (*Bucket) ProtoMessage() {}
 
 func (x *Bucket) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[2]
+	mi := &file_streamforge_v1_store_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -211,7 +275,7 @@ func (x *Bucket) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket.ProtoReflect.Descriptor instead.
 func (*Bucket) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{2}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Bucket) GetZone() int32 {
@@ -268,7 +332,7 @@ type ZoneFeatures struct {
 
 func (x *ZoneFeatures) Reset() {
 	*x = ZoneFeatures{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[3]
+	mi := &file_streamforge_v1_store_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -280,7 +344,7 @@ func (x *ZoneFeatures) String() string {
 func (*ZoneFeatures) ProtoMessage() {}
 
 func (x *ZoneFeatures) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[3]
+	mi := &file_streamforge_v1_store_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -293,7 +357,7 @@ func (x *ZoneFeatures) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ZoneFeatures.ProtoReflect.Descriptor instead.
 func (*ZoneFeatures) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{3}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ZoneFeatures) GetZone() int32 {
@@ -377,7 +441,7 @@ type FeatureBatch struct {
 
 func (x *FeatureBatch) Reset() {
 	*x = FeatureBatch{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[4]
+	mi := &file_streamforge_v1_store_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -389,7 +453,7 @@ func (x *FeatureBatch) String() string {
 func (*FeatureBatch) ProtoMessage() {}
 
 func (x *FeatureBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[4]
+	mi := &file_streamforge_v1_store_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -402,7 +466,7 @@ func (x *FeatureBatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FeatureBatch.ProtoReflect.Descriptor instead.
 func (*FeatureBatch) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{4}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *FeatureBatch) GetPartition() int32 {
@@ -480,7 +544,7 @@ type PutRequest struct {
 
 func (x *PutRequest) Reset() {
 	*x = PutRequest{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[5]
+	mi := &file_streamforge_v1_store_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -492,7 +556,7 @@ func (x *PutRequest) String() string {
 func (*PutRequest) ProtoMessage() {}
 
 func (x *PutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[5]
+	mi := &file_streamforge_v1_store_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -505,7 +569,7 @@ func (x *PutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutRequest.ProtoReflect.Descriptor instead.
 func (*PutRequest) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{5}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PutRequest) GetClientId() string {
@@ -545,7 +609,7 @@ type PutResponse struct {
 
 func (x *PutResponse) Reset() {
 	*x = PutResponse{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[6]
+	mi := &file_streamforge_v1_store_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -557,7 +621,7 @@ func (x *PutResponse) String() string {
 func (*PutResponse) ProtoMessage() {}
 
 func (x *PutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[6]
+	mi := &file_streamforge_v1_store_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -570,12 +634,100 @@ func (x *PutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutResponse.ProtoReflect.Descriptor instead.
 func (*PutResponse) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{6}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PutResponse) GetRaftIndex() uint64 {
 	if x != nil {
 		return x.RaftIndex
+	}
+	return 0
+}
+
+type PurgeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prefix        string                 `protobuf:"bytes,1,opt,name=prefix,proto3" json:"prefix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeRequest) Reset() {
+	*x = PurgeRequest{}
+	mi := &file_streamforge_v1_store_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeRequest) ProtoMessage() {}
+
+func (x *PurgeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_streamforge_v1_store_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeRequest.ProtoReflect.Descriptor instead.
+func (*PurgeRequest) Descriptor() ([]byte, []int) {
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PurgeRequest) GetPrefix() string {
+	if x != nil {
+		return x.Prefix
+	}
+	return ""
+}
+
+type PurgeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Deleted       uint64                 `protobuf:"varint,1,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeResponse) Reset() {
+	*x = PurgeResponse{}
+	mi := &file_streamforge_v1_store_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeResponse) ProtoMessage() {}
+
+func (x *PurgeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_streamforge_v1_store_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeResponse.ProtoReflect.Descriptor instead.
+func (*PurgeResponse) Descriptor() ([]byte, []int) {
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *PurgeResponse) GetDeleted() uint64 {
+	if x != nil {
+		return x.Deleted
 	}
 	return 0
 }
@@ -590,7 +742,7 @@ type GetRequest struct {
 
 func (x *GetRequest) Reset() {
 	*x = GetRequest{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[7]
+	mi := &file_streamforge_v1_store_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -602,7 +754,7 @@ func (x *GetRequest) String() string {
 func (*GetRequest) ProtoMessage() {}
 
 func (x *GetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[7]
+	mi := &file_streamforge_v1_store_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -615,7 +767,7 @@ func (x *GetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRequest.ProtoReflect.Descriptor instead.
 func (*GetRequest) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{7}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetRequest) GetKey() string {
@@ -643,7 +795,7 @@ type GetResponse struct {
 
 func (x *GetResponse) Reset() {
 	*x = GetResponse{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[8]
+	mi := &file_streamforge_v1_store_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -655,7 +807,7 @@ func (x *GetResponse) String() string {
 func (*GetResponse) ProtoMessage() {}
 
 func (x *GetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[8]
+	mi := &file_streamforge_v1_store_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -668,7 +820,7 @@ func (x *GetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetResponse.ProtoReflect.Descriptor instead.
 func (*GetResponse) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{8}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetResponse) GetValue() string {
@@ -703,7 +855,7 @@ type ProposeBatchRequest struct {
 
 func (x *ProposeBatchRequest) Reset() {
 	*x = ProposeBatchRequest{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[9]
+	mi := &file_streamforge_v1_store_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -715,7 +867,7 @@ func (x *ProposeBatchRequest) String() string {
 func (*ProposeBatchRequest) ProtoMessage() {}
 
 func (x *ProposeBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[9]
+	mi := &file_streamforge_v1_store_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -728,7 +880,7 @@ func (x *ProposeBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeBatchRequest.ProtoReflect.Descriptor instead.
 func (*ProposeBatchRequest) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{9}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ProposeBatchRequest) GetClientId() string {
@@ -763,7 +915,7 @@ type ProposeBatchResponse struct {
 
 func (x *ProposeBatchResponse) Reset() {
 	*x = ProposeBatchResponse{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[10]
+	mi := &file_streamforge_v1_store_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -775,7 +927,7 @@ func (x *ProposeBatchResponse) String() string {
 func (*ProposeBatchResponse) ProtoMessage() {}
 
 func (x *ProposeBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[10]
+	mi := &file_streamforge_v1_store_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -788,7 +940,7 @@ func (x *ProposeBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeBatchResponse.ProtoReflect.Descriptor instead.
 func (*ProposeBatchResponse) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{10}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ProposeBatchResponse) GetApplied() bool {
@@ -814,7 +966,7 @@ type GetPartitionStateRequest struct {
 
 func (x *GetPartitionStateRequest) Reset() {
 	*x = GetPartitionStateRequest{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[11]
+	mi := &file_streamforge_v1_store_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -826,7 +978,7 @@ func (x *GetPartitionStateRequest) String() string {
 func (*GetPartitionStateRequest) ProtoMessage() {}
 
 func (x *GetPartitionStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[11]
+	mi := &file_streamforge_v1_store_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -839,7 +991,7 @@ func (x *GetPartitionStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPartitionStateRequest.ProtoReflect.Descriptor instead.
 func (*GetPartitionStateRequest) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{11}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetPartitionStateRequest) GetPartition() int32 {
@@ -865,7 +1017,7 @@ type PartitionState struct {
 
 func (x *PartitionState) Reset() {
 	*x = PartitionState{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[12]
+	mi := &file_streamforge_v1_store_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -877,7 +1029,7 @@ func (x *PartitionState) String() string {
 func (*PartitionState) ProtoMessage() {}
 
 func (x *PartitionState) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[12]
+	mi := &file_streamforge_v1_store_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -890,7 +1042,7 @@ func (x *PartitionState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartitionState.ProtoReflect.Descriptor instead.
 func (*PartitionState) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{12}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PartitionState) GetPartition() int32 {
@@ -953,7 +1105,7 @@ type GetZoneFeaturesRequest struct {
 
 func (x *GetZoneFeaturesRequest) Reset() {
 	*x = GetZoneFeaturesRequest{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[13]
+	mi := &file_streamforge_v1_store_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -965,7 +1117,7 @@ func (x *GetZoneFeaturesRequest) String() string {
 func (*GetZoneFeaturesRequest) ProtoMessage() {}
 
 func (x *GetZoneFeaturesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[13]
+	mi := &file_streamforge_v1_store_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -978,7 +1130,7 @@ func (x *GetZoneFeaturesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetZoneFeaturesRequest.ProtoReflect.Descriptor instead.
 func (*GetZoneFeaturesRequest) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{13}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetZoneFeaturesRequest) GetZones() []int32 {
@@ -1005,7 +1157,7 @@ type GetZoneFeaturesResponse struct {
 
 func (x *GetZoneFeaturesResponse) Reset() {
 	*x = GetZoneFeaturesResponse{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[14]
+	mi := &file_streamforge_v1_store_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1017,7 +1169,7 @@ func (x *GetZoneFeaturesResponse) String() string {
 func (*GetZoneFeaturesResponse) ProtoMessage() {}
 
 func (x *GetZoneFeaturesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[14]
+	mi := &file_streamforge_v1_store_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1030,7 +1182,7 @@ func (x *GetZoneFeaturesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetZoneFeaturesResponse.ProtoReflect.Descriptor instead.
 func (*GetZoneFeaturesResponse) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{14}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetZoneFeaturesResponse) GetFeatures() []*ZoneFeatures {
@@ -1057,7 +1209,7 @@ type StatusRequest struct {
 
 func (x *StatusRequest) Reset() {
 	*x = StatusRequest{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[15]
+	mi := &file_streamforge_v1_store_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1069,7 +1221,7 @@ func (x *StatusRequest) String() string {
 func (*StatusRequest) ProtoMessage() {}
 
 func (x *StatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[15]
+	mi := &file_streamforge_v1_store_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1082,7 +1234,7 @@ func (x *StatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
 func (*StatusRequest) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{15}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *StatusRequest) GetFingerprint() bool {
@@ -1101,7 +1253,7 @@ type StatusResponse struct {
 
 func (x *StatusResponse) Reset() {
 	*x = StatusResponse{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[16]
+	mi := &file_streamforge_v1_store_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1113,7 +1265,7 @@ func (x *StatusResponse) String() string {
 func (*StatusResponse) ProtoMessage() {}
 
 func (x *StatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[16]
+	mi := &file_streamforge_v1_store_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1126,7 +1278,7 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{16}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *StatusResponse) GetStatus() *NodeStatus {
@@ -1145,7 +1297,7 @@ type GetPartitionStateResponse struct {
 
 func (x *GetPartitionStateResponse) Reset() {
 	*x = GetPartitionStateResponse{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[17]
+	mi := &file_streamforge_v1_store_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1157,7 +1309,7 @@ func (x *GetPartitionStateResponse) String() string {
 func (*GetPartitionStateResponse) ProtoMessage() {}
 
 func (x *GetPartitionStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[17]
+	mi := &file_streamforge_v1_store_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1170,7 +1322,7 @@ func (x *GetPartitionStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPartitionStateResponse.ProtoReflect.Descriptor instead.
 func (*GetPartitionStateResponse) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{17}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetPartitionStateResponse) GetState() *PartitionState {
@@ -1192,7 +1344,7 @@ type PeerProgress struct {
 
 func (x *PeerProgress) Reset() {
 	*x = PeerProgress{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[18]
+	mi := &file_streamforge_v1_store_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1204,7 +1356,7 @@ func (x *PeerProgress) String() string {
 func (*PeerProgress) ProtoMessage() {}
 
 func (x *PeerProgress) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[18]
+	mi := &file_streamforge_v1_store_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1217,7 +1369,7 @@ func (x *PeerProgress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PeerProgress.ProtoReflect.Descriptor instead.
 func (*PeerProgress) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{18}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PeerProgress) GetId() uint64 {
@@ -1277,7 +1429,7 @@ type NodeStatus struct {
 
 func (x *NodeStatus) Reset() {
 	*x = NodeStatus{}
-	mi := &file_streamforge_v1_store_proto_msgTypes[19]
+	mi := &file_streamforge_v1_store_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1289,7 +1441,7 @@ func (x *NodeStatus) String() string {
 func (*NodeStatus) ProtoMessage() {}
 
 func (x *NodeStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_streamforge_v1_store_proto_msgTypes[19]
+	mi := &file_streamforge_v1_store_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1302,7 +1454,7 @@ func (x *NodeStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeStatus.ProtoReflect.Descriptor instead.
 func (*NodeStatus) Descriptor() ([]byte, []int) {
-	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{19}
+	return file_streamforge_v1_store_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *NodeStatus) GetId() uint64 {
@@ -1428,14 +1580,17 @@ var File_streamforge_v1_store_proto protoreflect.FileDescriptor
 
 const file_streamforge_v1_store_proto_rawDesc = "" +
 	"\n" +
-	"\x1astreamforge/v1/store.proto\x12\x0estreamforge.v1\"\x9f\x01\n" +
+	"\x1astreamforge/v1/store.proto\x12\x0estreamforge.v1\"\xd0\x01\n" +
 	"\aCommand\x12\x1b\n" +
 	"\tclient_id\x18\x01 \x01(\tR\bclientId\x12\x10\n" +
 	"\x03seq\x18\x02 \x01(\x04R\x03seq\x12)\n" +
 	"\x03put\x18\n" +
 	" \x01(\v2\x15.streamforge.v1.PutOpH\x00R\x03put\x124\n" +
-	"\x05batch\x18\v \x01(\v2\x1c.streamforge.v1.FeatureBatchH\x00R\x05batchB\x04\n" +
-	"\x02op\"/\n" +
+	"\x05batch\x18\v \x01(\v2\x1c.streamforge.v1.FeatureBatchH\x00R\x05batch\x12/\n" +
+	"\x05purge\x18\f \x01(\v2\x17.streamforge.v1.PurgeOpH\x00R\x05purgeB\x04\n" +
+	"\x02op\"!\n" +
+	"\aPurgeOp\x12\x16\n" +
+	"\x06prefix\x18\x01 \x01(\tR\x06prefix\"/\n" +
 	"\x05PutOp\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\"\x93\x01\n" +
@@ -1473,7 +1628,11 @@ const file_streamforge_v1_store_proto_rawDesc = "" +
 	"\x05value\x18\x04 \x01(\tR\x05value\",\n" +
 	"\vPutResponse\x12\x1d\n" +
 	"\n" +
-	"raft_index\x18\x01 \x01(\x04R\traftIndex\"B\n" +
+	"raft_index\x18\x01 \x01(\x04R\traftIndex\"&\n" +
+	"\fPurgeRequest\x12\x16\n" +
+	"\x06prefix\x18\x01 \x01(\tR\x06prefix\")\n" +
+	"\rPurgeResponse\x12\x18\n" +
+	"\adeleted\x18\x01 \x01(\x04R\adeleted\"B\n" +
 	"\n" +
 	"GetRequest\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\"\n" +
@@ -1544,9 +1703,10 @@ const file_streamforge_v1_store_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\x04R\x05value:\x028\x01\x1aC\n" +
 	"\x15PartitionOffsetsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x012\x80\x04\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x012\xc6\x04\n" +
 	"\fStoreService\x12>\n" +
-	"\x03Put\x12\x1a.streamforge.v1.PutRequest\x1a\x1b.streamforge.v1.PutResponse\x12>\n" +
+	"\x03Put\x12\x1a.streamforge.v1.PutRequest\x1a\x1b.streamforge.v1.PutResponse\x12D\n" +
+	"\x05Purge\x12\x1c.streamforge.v1.PurgeRequest\x1a\x1d.streamforge.v1.PurgeResponse\x12>\n" +
 	"\x03Get\x12\x1a.streamforge.v1.GetRequest\x1a\x1b.streamforge.v1.GetResponse\x12Y\n" +
 	"\fProposeBatch\x12#.streamforge.v1.ProposeBatchRequest\x1a$.streamforge.v1.ProposeBatchResponse\x12h\n" +
 	"\x11GetPartitionState\x12(.streamforge.v1.GetPartitionStateRequest\x1a).streamforge.v1.GetPartitionStateResponse\x12b\n" +
@@ -1565,61 +1725,67 @@ func file_streamforge_v1_store_proto_rawDescGZIP() []byte {
 	return file_streamforge_v1_store_proto_rawDescData
 }
 
-var file_streamforge_v1_store_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_streamforge_v1_store_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_streamforge_v1_store_proto_goTypes = []any{
 	(*Command)(nil),                   // 0: streamforge.v1.Command
-	(*PutOp)(nil),                     // 1: streamforge.v1.PutOp
-	(*Bucket)(nil),                    // 2: streamforge.v1.Bucket
-	(*ZoneFeatures)(nil),              // 3: streamforge.v1.ZoneFeatures
-	(*FeatureBatch)(nil),              // 4: streamforge.v1.FeatureBatch
-	(*PutRequest)(nil),                // 5: streamforge.v1.PutRequest
-	(*PutResponse)(nil),               // 6: streamforge.v1.PutResponse
-	(*GetRequest)(nil),                // 7: streamforge.v1.GetRequest
-	(*GetResponse)(nil),               // 8: streamforge.v1.GetResponse
-	(*ProposeBatchRequest)(nil),       // 9: streamforge.v1.ProposeBatchRequest
-	(*ProposeBatchResponse)(nil),      // 10: streamforge.v1.ProposeBatchResponse
-	(*GetPartitionStateRequest)(nil),  // 11: streamforge.v1.GetPartitionStateRequest
-	(*PartitionState)(nil),            // 12: streamforge.v1.PartitionState
-	(*GetZoneFeaturesRequest)(nil),    // 13: streamforge.v1.GetZoneFeaturesRequest
-	(*GetZoneFeaturesResponse)(nil),   // 14: streamforge.v1.GetZoneFeaturesResponse
-	(*StatusRequest)(nil),             // 15: streamforge.v1.StatusRequest
-	(*StatusResponse)(nil),            // 16: streamforge.v1.StatusResponse
-	(*GetPartitionStateResponse)(nil), // 17: streamforge.v1.GetPartitionStateResponse
-	(*PeerProgress)(nil),              // 18: streamforge.v1.PeerProgress
-	(*NodeStatus)(nil),                // 19: streamforge.v1.NodeStatus
-	nil,                               // 20: streamforge.v1.NodeStatus.SentToEntry
-	nil,                               // 21: streamforge.v1.NodeStatus.PartitionOffsetsEntry
+	(*PurgeOp)(nil),                   // 1: streamforge.v1.PurgeOp
+	(*PutOp)(nil),                     // 2: streamforge.v1.PutOp
+	(*Bucket)(nil),                    // 3: streamforge.v1.Bucket
+	(*ZoneFeatures)(nil),              // 4: streamforge.v1.ZoneFeatures
+	(*FeatureBatch)(nil),              // 5: streamforge.v1.FeatureBatch
+	(*PutRequest)(nil),                // 6: streamforge.v1.PutRequest
+	(*PutResponse)(nil),               // 7: streamforge.v1.PutResponse
+	(*PurgeRequest)(nil),              // 8: streamforge.v1.PurgeRequest
+	(*PurgeResponse)(nil),             // 9: streamforge.v1.PurgeResponse
+	(*GetRequest)(nil),                // 10: streamforge.v1.GetRequest
+	(*GetResponse)(nil),               // 11: streamforge.v1.GetResponse
+	(*ProposeBatchRequest)(nil),       // 12: streamforge.v1.ProposeBatchRequest
+	(*ProposeBatchResponse)(nil),      // 13: streamforge.v1.ProposeBatchResponse
+	(*GetPartitionStateRequest)(nil),  // 14: streamforge.v1.GetPartitionStateRequest
+	(*PartitionState)(nil),            // 15: streamforge.v1.PartitionState
+	(*GetZoneFeaturesRequest)(nil),    // 16: streamforge.v1.GetZoneFeaturesRequest
+	(*GetZoneFeaturesResponse)(nil),   // 17: streamforge.v1.GetZoneFeaturesResponse
+	(*StatusRequest)(nil),             // 18: streamforge.v1.StatusRequest
+	(*StatusResponse)(nil),            // 19: streamforge.v1.StatusResponse
+	(*GetPartitionStateResponse)(nil), // 20: streamforge.v1.GetPartitionStateResponse
+	(*PeerProgress)(nil),              // 21: streamforge.v1.PeerProgress
+	(*NodeStatus)(nil),                // 22: streamforge.v1.NodeStatus
+	nil,                               // 23: streamforge.v1.NodeStatus.SentToEntry
+	nil,                               // 24: streamforge.v1.NodeStatus.PartitionOffsetsEntry
 }
 var file_streamforge_v1_store_proto_depIdxs = []int32{
-	1,  // 0: streamforge.v1.Command.put:type_name -> streamforge.v1.PutOp
-	4,  // 1: streamforge.v1.Command.batch:type_name -> streamforge.v1.FeatureBatch
-	2,  // 2: streamforge.v1.FeatureBatch.buckets:type_name -> streamforge.v1.Bucket
-	3,  // 3: streamforge.v1.FeatureBatch.features:type_name -> streamforge.v1.ZoneFeatures
-	4,  // 4: streamforge.v1.ProposeBatchRequest.batch:type_name -> streamforge.v1.FeatureBatch
-	2,  // 5: streamforge.v1.PartitionState.buckets:type_name -> streamforge.v1.Bucket
-	3,  // 6: streamforge.v1.GetZoneFeaturesResponse.features:type_name -> streamforge.v1.ZoneFeatures
-	19, // 7: streamforge.v1.StatusResponse.status:type_name -> streamforge.v1.NodeStatus
-	12, // 8: streamforge.v1.GetPartitionStateResponse.state:type_name -> streamforge.v1.PartitionState
-	18, // 9: streamforge.v1.NodeStatus.peers:type_name -> streamforge.v1.PeerProgress
-	20, // 10: streamforge.v1.NodeStatus.sent_to:type_name -> streamforge.v1.NodeStatus.SentToEntry
-	21, // 11: streamforge.v1.NodeStatus.partition_offsets:type_name -> streamforge.v1.NodeStatus.PartitionOffsetsEntry
-	5,  // 12: streamforge.v1.StoreService.Put:input_type -> streamforge.v1.PutRequest
-	7,  // 13: streamforge.v1.StoreService.Get:input_type -> streamforge.v1.GetRequest
-	9,  // 14: streamforge.v1.StoreService.ProposeBatch:input_type -> streamforge.v1.ProposeBatchRequest
-	11, // 15: streamforge.v1.StoreService.GetPartitionState:input_type -> streamforge.v1.GetPartitionStateRequest
-	13, // 16: streamforge.v1.StoreService.GetZoneFeatures:input_type -> streamforge.v1.GetZoneFeaturesRequest
-	15, // 17: streamforge.v1.StoreService.Status:input_type -> streamforge.v1.StatusRequest
-	6,  // 18: streamforge.v1.StoreService.Put:output_type -> streamforge.v1.PutResponse
-	8,  // 19: streamforge.v1.StoreService.Get:output_type -> streamforge.v1.GetResponse
-	10, // 20: streamforge.v1.StoreService.ProposeBatch:output_type -> streamforge.v1.ProposeBatchResponse
-	17, // 21: streamforge.v1.StoreService.GetPartitionState:output_type -> streamforge.v1.GetPartitionStateResponse
-	14, // 22: streamforge.v1.StoreService.GetZoneFeatures:output_type -> streamforge.v1.GetZoneFeaturesResponse
-	16, // 23: streamforge.v1.StoreService.Status:output_type -> streamforge.v1.StatusResponse
-	18, // [18:24] is the sub-list for method output_type
-	12, // [12:18] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	2,  // 0: streamforge.v1.Command.put:type_name -> streamforge.v1.PutOp
+	5,  // 1: streamforge.v1.Command.batch:type_name -> streamforge.v1.FeatureBatch
+	1,  // 2: streamforge.v1.Command.purge:type_name -> streamforge.v1.PurgeOp
+	3,  // 3: streamforge.v1.FeatureBatch.buckets:type_name -> streamforge.v1.Bucket
+	4,  // 4: streamforge.v1.FeatureBatch.features:type_name -> streamforge.v1.ZoneFeatures
+	5,  // 5: streamforge.v1.ProposeBatchRequest.batch:type_name -> streamforge.v1.FeatureBatch
+	3,  // 6: streamforge.v1.PartitionState.buckets:type_name -> streamforge.v1.Bucket
+	4,  // 7: streamforge.v1.GetZoneFeaturesResponse.features:type_name -> streamforge.v1.ZoneFeatures
+	22, // 8: streamforge.v1.StatusResponse.status:type_name -> streamforge.v1.NodeStatus
+	15, // 9: streamforge.v1.GetPartitionStateResponse.state:type_name -> streamforge.v1.PartitionState
+	21, // 10: streamforge.v1.NodeStatus.peers:type_name -> streamforge.v1.PeerProgress
+	23, // 11: streamforge.v1.NodeStatus.sent_to:type_name -> streamforge.v1.NodeStatus.SentToEntry
+	24, // 12: streamforge.v1.NodeStatus.partition_offsets:type_name -> streamforge.v1.NodeStatus.PartitionOffsetsEntry
+	6,  // 13: streamforge.v1.StoreService.Put:input_type -> streamforge.v1.PutRequest
+	8,  // 14: streamforge.v1.StoreService.Purge:input_type -> streamforge.v1.PurgeRequest
+	10, // 15: streamforge.v1.StoreService.Get:input_type -> streamforge.v1.GetRequest
+	12, // 16: streamforge.v1.StoreService.ProposeBatch:input_type -> streamforge.v1.ProposeBatchRequest
+	14, // 17: streamforge.v1.StoreService.GetPartitionState:input_type -> streamforge.v1.GetPartitionStateRequest
+	16, // 18: streamforge.v1.StoreService.GetZoneFeatures:input_type -> streamforge.v1.GetZoneFeaturesRequest
+	18, // 19: streamforge.v1.StoreService.Status:input_type -> streamforge.v1.StatusRequest
+	7,  // 20: streamforge.v1.StoreService.Put:output_type -> streamforge.v1.PutResponse
+	9,  // 21: streamforge.v1.StoreService.Purge:output_type -> streamforge.v1.PurgeResponse
+	11, // 22: streamforge.v1.StoreService.Get:output_type -> streamforge.v1.GetResponse
+	13, // 23: streamforge.v1.StoreService.ProposeBatch:output_type -> streamforge.v1.ProposeBatchResponse
+	20, // 24: streamforge.v1.StoreService.GetPartitionState:output_type -> streamforge.v1.GetPartitionStateResponse
+	17, // 25: streamforge.v1.StoreService.GetZoneFeatures:output_type -> streamforge.v1.GetZoneFeaturesResponse
+	19, // 26: streamforge.v1.StoreService.Status:output_type -> streamforge.v1.StatusResponse
+	20, // [20:27] is the sub-list for method output_type
+	13, // [13:20] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_streamforge_v1_store_proto_init() }
@@ -1630,6 +1796,7 @@ func file_streamforge_v1_store_proto_init() {
 	file_streamforge_v1_store_proto_msgTypes[0].OneofWrappers = []any{
 		(*Command_Put)(nil),
 		(*Command_Batch)(nil),
+		(*Command_Purge)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1637,7 +1804,7 @@ func file_streamforge_v1_store_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_streamforge_v1_store_proto_rawDesc), len(file_streamforge_v1_store_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -19,6 +19,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 
@@ -35,6 +36,8 @@ type Result struct {
 	// offset. Duplicates change nothing.
 	Applied bool
 	Err     error
+	// Count is the number of keys a purge deleted.
+	Count uint64
 }
 
 type clientRecord struct {
@@ -113,6 +116,24 @@ func (s *SM) Apply(e raft.Entry) Result {
 		return Result{Index: e.Index, Applied: true}
 	case *sfv1.Command_Batch:
 		return s.applyBatch(e.Index, op.Batch)
+	case *sfv1.Command_Purge:
+		p := op.Purge.Prefix
+		if p == "" {
+			return Result{Index: e.Index, Err: fmt.Errorf("store: empty purge prefix")}
+		}
+		var n uint64
+		for k := range s.kv {
+			if strings.HasPrefix(k, p) {
+				delete(s.kv, k)
+				n++
+			}
+		}
+		for c := range s.clients {
+			if strings.HasPrefix(c, p) {
+				delete(s.clients, c)
+			}
+		}
+		return Result{Index: e.Index, Applied: true, Count: n}
 	default:
 		return Result{Index: e.Index, Err: fmt.Errorf("store: unknown command in entry %d", e.Index)}
 	}

@@ -12,6 +12,8 @@ service StoreService {
   // safe: the state machine applies each (client_id, seq) at most once.
   // Used by the linearizability probe and tests, not by the feature path.
   rpc Put(PutRequest) returns (PutResponse);
+  // Purge deletes a key prefix (see PurgeOp).
+  rpc Purge(PurgeRequest) returns (PurgeResponse);
   // Get reads a register, either linearizably (ReadIndex on the leader) or
   // from the local state machine of whichever node answers.
   rpc Get(GetRequest) returns (GetResponse);
@@ -35,7 +37,16 @@ message Command {
   oneof op {
     PutOp put = 10;
     FeatureBatch batch = 11;
+    PurgeOp purge = 12;
   }
+}
+
+// PurgeOp deletes every register whose key starts with prefix, and the
+// deduplication records of client ids starting with prefix. The live
+// dashboard's linearizability probe uses a fresh prefix per checked window
+// and purges it afterwards, so its keys do not accumulate forever.
+message PurgeOp {
+  string prefix = 1;
 }
 
 message PutOp {
@@ -98,6 +109,14 @@ message PutRequest {
 
 message PutResponse {
   uint64 raft_index = 1;
+}
+
+message PurgeRequest {
+  string prefix = 1;
+}
+
+message PurgeResponse {
+  uint64 deleted = 1;
 }
 
 message GetRequest {

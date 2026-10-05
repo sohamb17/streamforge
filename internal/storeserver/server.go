@@ -76,6 +76,15 @@ func (s *Server) Put(ctx context.Context, req *sfv1.PutRequest) (*sfv1.PutRespon
 	return &sfv1.PutResponse{RaftIndex: res.Index}, nil
 }
 
+// Purge implements StoreService.
+func (s *Server) Purge(ctx context.Context, req *sfv1.PurgeRequest) (*sfv1.PurgeResponse, error) {
+	res, err := s.propose(ctx, &sfv1.Command{Op: &sfv1.Command_Purge{Purge: &sfv1.PurgeOp{Prefix: req.Prefix}}})
+	if err != nil {
+		return nil, err
+	}
+	return &sfv1.PurgeResponse{Deleted: res.Count}, nil
+}
+
 // Get implements StoreService.
 func (s *Server) Get(ctx context.Context, req *sfv1.GetRequest) (*sfv1.GetResponse, error) {
 	if req.Linearizable {

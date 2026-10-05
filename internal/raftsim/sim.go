@@ -57,13 +57,14 @@ type pendingRead struct {
 
 // Node is one simulated server.
 type Node struct {
-	ID    uint64
-	Up    bool
-	Core  *raft.Core
-	SM    *store.SM
-	disk  disk
-	props map[uint64]proposal
-	reads map[string]*pendingRead
+	ID     uint64
+	Up     bool
+	Paused bool // frozen: no ticks, inbound messages held until unpause
+	Core   *raft.Core
+	SM     *store.SM
+	disk   disk
+	props  map[uint64]proposal
+	reads  map[string]*pendingRead
 	// Last observed soft state, for the visualization.
 	Role raft.Role
 	Lead uint64
@@ -78,8 +79,9 @@ type MsgEvent struct {
 }
 
 type inflight struct {
-	m  raft.Message
-	at int
+	m      raft.Message
+	at     int
+	sentAt int
 }
 
 // Cluster is a simulated Raft group.
@@ -127,6 +129,7 @@ func (c *Cluster) IDs() []uint64 { return c.ids }
 
 func (c *Cluster) start(n *Node) {
 	n.Up = true
+	n.Paused = false
 	n.props = map[uint64]proposal{}
 	n.reads = map[string]*pendingRead{}
 	n.SM = store.New(window.DefaultBucketMs)
@@ -142,6 +145,22 @@ func (c *Cluster) start(n *Node) {
 		Rand: rand.New(rand.NewSource(c.rng.Int63())),
 	}, raft.Storage{HardState: n.disk.hs, Snapshot: n.disk.snap, Entries: append([]raft.Entry(nil), n.disk.entries...)})
 	n.Role, n.Lead = raft.Follower, raft.None
+}
+
+// Pause freezes a node (like docker pause or a long GC pause): it neither
+// ticks nor processes messages; messages to it wait until Unpause.
+func (c *Cluster) Pause(id uint64) { c.Nodes[id].Paused = true }
+
+// Unpause resumes a paused node.
+func (c *Cluster) Unpause(id uint64) { c.Nodes[id].Paused = false }
+
+// InFlight lists messages on the wire, for animation.
+func (c *Cluster) InFlight() []MsgEvent {
+	out := make([]MsgEvent, len(c.inflight))
+	for i, f := range c.inflight {
+		out[i] = MsgEvent{Msg: f.m, SentAt: f.sentAt, DeliverAt: f.at}
+	}
+	return out
 }
 
 // Crash stops a node. Its disk survives; everything in memory is lost.
@@ -216,7 +235,7 @@ func (c *Cluster) Leader() uint64 {
 func (c *Cluster) Step() {
 	c.Now++
 	for _, id := range c.ids {
-		if n := c.Nodes[id]; n.Up {
+		if n := c.Nodes[id]; n.Up && !n.Paused {
 			n.Core.Tick()
 			c.process(n)
 		}
@@ -226,7 +245,7 @@ func (c *Cluster) Step() {
 	var due []inflight
 	rest := c.inflight[:0]
 	for _, f := range c.inflight {
-		if f.at <= c.Now {
+		if f.at <= c.Now && !c.Nodes[f.m.To].Paused {
 			due = append(due, f)
 		} else {
 			rest = append(rest, f)
@@ -255,7 +274,7 @@ func (c *Cluster) send(m raft.Message) {
 			d += c.rng.Intn(c.cfg.MaxDelay - c.cfg.MinDelay + 1)
 		}
 		ev.DeliverAt = c.Now + d
-		c.inflight = append(c.inflight, inflight{m: m, at: ev.DeliverAt})
+		c.inflight = append(c.inflight, inflight{m: m, at: ev.DeliverAt, sentAt: c.Now})
 	}
 	if c.OnMessage != nil {
 		c.OnMessage(ev)
@@ -395,8 +414,8 @@ func (c *Cluster) checkLeaders() {
 // is unknown (leadership lost, crash, overwritten).
 func (c *Cluster) Propose(id uint64, data []byte, done func(store.Result, bool)) error {
 	n := c.Nodes[id]
-	if !n.Up {
-		return fmt.Errorf("node %d down", id)
+	if !n.Up || n.Paused {
+		return fmt.Errorf("node %d unreachable", id)
 	}
 	idx, term, err := n.Core.Propose(data)
 	if err != nil {
@@ -411,8 +430,8 @@ func (c *Cluster) Propose(id uint64, data []byte, done func(store.Result, bool))
 // state machine may now be read linearizably.
 func (c *Cluster) Read(id uint64, done func(ok bool)) error {
 	n := c.Nodes[id]
-	if !n.Up {
-		return fmt.Errorf("node %d down", id)
+	if !n.Up || n.Paused {
+		return fmt.Errorf("node %d unreachable", id)
 	}
 	c.readSeq++
 	ctx := []byte(fmt.Sprintf("r%d", c.readSeq))

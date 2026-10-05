@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"sort"
@@ -84,6 +85,8 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
 	// POST /admin/block?peers=4,5 drops all Raft traffic to and from those
 	// peers (a transport-level partition). POST /admin/block clears it.
@@ -111,7 +114,11 @@ func main() {
 	mux.HandleFunc("/admin/status", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
 		defer cancel()
-		st, err := node.StatusWithFingerprint(ctx)
+		status := node.Status
+		if r.URL.Query().Get("fingerprint") == "1" {
+			status = node.StatusWithFingerprint
+		}
+		st, err := status(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusServiceUnavailable)
 			return
