@@ -1,0 +1,24 @@
+worker1-1  | {"time":"2026-10-05T05:09:21.642155533Z","level":"INFO","msg":"worker up","svc":"worker","worker":"dec440e4360f","topic":"trips","group":"streamforge-workers"}
+worker1-1  | {"time":"2026-10-05T05:09:22.018278437Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":0,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:09:22.018610518Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":1,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:09:22.0189809Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":2,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:09:22.019221064Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":3,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:09:22.019424536Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":4,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:09:22.019696431Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":5,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:09:29.38163889Z","level":"INFO","msg":"worker up","svc":"worker","worker":"dec440e4360f","topic":"trips","group":"streamforge-workers"}
+worker1-1  | {"time":"2026-10-05T05:09:36.931504814Z","level":"INFO","msg":"worker up","svc":"worker","worker":"dec440e4360f","topic":"trips","group":"streamforge-workers"}
+worker1-1  | {"time":"2026-10-05T05:09:44.314695627Z","level":"INFO","msg":"worker up","svc":"worker","worker":"dec440e4360f","topic":"trips","group":"streamforge-workers"}
+worker1-1  | {"time":"2026-10-05T05:09:51.782455843Z","level":"INFO","msg":"worker up","svc":"worker","worker":"dec440e4360f","topic":"trips","group":"streamforge-workers"}
+worker1-1  | {"time":"2026-10-05T05:10:04.346173577Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":0,"offset":20000,"events":20000,"late_dropped":13}
+worker1-1  | {"time":"2026-10-05T05:10:04.347163042Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":1,"offset":12337,"events":12337,"late_dropped":7}
+worker1-1  | {"time":"2026-10-05T05:10:04.348260852Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":2,"offset":5192,"events":5192,"late_dropped":3}
+worker1-1  | {"time":"2026-10-05T05:10:04.349334196Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":3,"offset":12201,"events":12201,"late_dropped":6}
+worker1-1  | {"time":"2026-10-05T05:10:04.350183282Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":4,"offset":5136,"events":5136,"late_dropped":4}
+worker1-1  | {"time":"2026-10-05T05:10:04.351152269Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":5,"offset":18951,"events":18951,"late_dropped":6}
+worker1-1  | {"time":"2026-10-05T05:10:53.085993765Z","level":"INFO","msg":"worker up","svc":"worker","worker":"dec440e4360f","topic":"trips","group":"streamforge-workers"}
+worker1-1  | {"time":"2026-10-05T05:10:54.718133261Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":0,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:10:54.718781252Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":1,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:10:54.719058955Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":2,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:10:54.719360398Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":3,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:10:54.719553521Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":4,"offset":0,"events":0,"late_dropped":0}
+worker1-1  | {"time":"2026-10-05T05:10:54.720048423Z","level":"INFO","msg":"resuming partition from store","svc":"worker","worker":"dec440e4360f","partition":5,"offset":0,"events":0,"late_dropped":0}

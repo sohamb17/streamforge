@@ -1,0 +1,12 @@
+[gate1 00:09:11] starting kafka, storenode1, postgres
+[gate1 00:09:12] replaying 1000000 trips (TLC 2026-03, as fast as possible, 0.2% published late)
+{"time":"2026-10-05T05:09:19.78348995Z","level":"INFO","msg":"loaded TLC file","svc":"replayer","file":"/data/yellow_tripdata_2026-03.parquet","rows":3952451,"kept":3925354,"bad_time":19,"bad_zone":6249,"bad_fare":20690,"bad_distance":139,"took":"7.112051287s"}
+{"time":"2026-10-05T05:09:21.196108058Z","level":"INFO","msg":"done","svc":"replayer","published":1000000,"took":"1.337743112s"}
+[gate1 00:09:21] run 1: worker with crashes (docker kill every 7 s, 4 times)
+[gate1 00:09:29] killed worker1 (1)
+[gate1 00:09:36] killed worker1 (2)
+[gate1 00:09:44] killed worker1 (3)
+[gate1 00:09:51] killed worker1 (4)
+[gate1 00:10:52] run 2: wipe the store and process the same log again (no crashes)
+[gate1 00:11:42] PASS: identical fingerprint across runs:   "sha256": "c9e817593c7f6dee97e2b75f44df7eac8c682feb64697227230dacd8d552a6da",
+[gate1 00:11:43] gate 1 done
