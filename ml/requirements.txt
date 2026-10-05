@@ -1,0 +1,5 @@
+scikit-learn>=1.5
+pandas>=2.2
+psycopg[binary]>=3.2
+requests>=2.32
+joblib>=1.4

@@ -1,0 +1,24 @@
+{
+  "examples": 582152,
+  "train": 407529,
+  "test": 174623,
+  "positive_rate_test": 0.1231,
+  "train_from": "2026-03-01 00:05:00+00:00",
+  "split_at": "2026-03-22 11:35:00+00:00",
+  "test_to": "2026-03-31 23:40:00+00:00",
+  "roc_auc": 0.7338,
+  "average_precision": 0.2684,
+  "baseline_spike_ratio_roc_auc": 0.5806,
+  "future_leaks_in_join": 0,
+  "fit_seconds": 1.04,
+  "features": [
+    "trips_5m",
+    "trips_30m",
+    "trips_60m",
+    "fare_mean_15m",
+    "distance_mean_15m",
+    "demand_spike_ratio",
+    "hour_sin",
+    "hour_cos"
+  ]
+}
