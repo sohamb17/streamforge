@@ -1,0 +1,17 @@
+# Raw data stays out of Git; see data/MANIFEST.md for how to fetch it.
+data/*
+!data/MANIFEST.md
+!data/fetch.sh
+
+# Build output
+/bin/
+/web/node_modules/
+/web/dist/
+!/web/dist/.gitkeep
+/web/.vite/
+
+# Local run artifacts
+bench/results/raw/
+*.test
+*.out
+.env

@@ -1,0 +1,194 @@
+syntax = "proto3";
+
+package streamforge.v1;
+
+option go_package = "github.com/sohamb17/streamforge/gen/streamforge/v1;sfv1";
+
+// Store is the internal API of one online-store node (one member of the
+// 5-node Raft group). Writes must go to the leader; a follower answers with
+// codes.FailedPrecondition and the trailer "sf-leader: <addr>".
+service StoreService {
+  // Put writes a register value through Raft. (client_id, seq) makes retries
+  // safe: the state machine applies each (client_id, seq) at most once.
+  // Used by the linearizability probe and tests, not by the feature path.
+  rpc Put(PutRequest) returns (PutResponse);
+  // Get reads a register, either linearizably (ReadIndex on the leader) or
+  // from the local state machine of whichever node answers.
+  rpc Get(GetRequest) returns (GetResponse);
+  // ProposeBatch commits a stream worker's batch: feature outputs, window
+  // operator state and the Kafka offset that produced them, atomically.
+  rpc ProposeBatch(ProposeBatchRequest) returns (ProposeBatchResponse);
+  // GetPartitionState returns the committed offset and window state of one
+  // Kafka partition. A restarting worker resumes from here, not from Kafka.
+  rpc GetPartitionState(GetPartitionStateRequest) returns (GetPartitionStateResponse);
+  // GetZoneFeatures returns the latest committed feature row per zone.
+  rpc GetZoneFeatures(GetZoneFeaturesRequest) returns (GetZoneFeaturesResponse);
+  // Status reports Raft and state-machine internals for the dashboard.
+  rpc Status(StatusRequest) returns (StatusResponse);
+}
+
+// ---- replicated commands (the Raft log payload) ----
+
+message Command {
+  string client_id = 1;
+  uint64 seq = 2;
+  oneof op {
+    PutOp put = 10;
+    FeatureBatch batch = 11;
+  }
+}
+
+message PutOp {
+  string key = 1;
+  string value = 2;
+}
+
+// One aggregation bucket: all events of one zone with event time in
+// [start_ms, start_ms + bucket width).
+message Bucket {
+  int32 zone = 1;
+  int64 start_ms = 2;
+  int64 count = 3;
+  int64 fare_cents = 4;
+  int64 distance_milli = 5;
+}
+
+// Feature row for one zone at the close of one window. Only exact integer
+// sums are stored; means and ratios are derived at read time, so replays and
+// backfills can be compared for exact equality.
+message ZoneFeatures {
+  int32 zone = 1;
+  int64 window_end_ms = 2;
+  int64 trips_5m = 3;
+  int64 trips_30m = 4;
+  int64 trips_60m = 5;
+  int64 count_15m = 6;
+  int64 fare_cents_15m = 7;
+  int64 distance_milli_15m = 8;
+}
+
+message FeatureBatch {
+  int32 partition = 1;
+  // Last Kafka offset of this partition reflected in the batch (inclusive).
+  // The state machine ignores a batch whose to_offset is not greater than
+  // the stored offset for the partition.
+  int64 to_offset = 2;
+  int64 max_event_time_ms = 3;
+  // Every window ending at or before this time has been emitted.
+  int64 closed_until_ms = 4;
+  int64 late_dropped_total = 5;
+  int64 events_total = 6;
+  // Buckets changed since the previous batch (absolute values, not deltas).
+  repeated Bucket buckets = 7;
+  // Outputs of windows closed since the previous batch.
+  repeated ZoneFeatures features = 8;
+  // Wall-clock publish time of the event that closed the newest window,
+  // used only to measure freshness.
+  int64 trigger_publish_ms = 9;
+}
+
+// ---- RPC messages ----
+
+message PutRequest {
+  string client_id = 1;
+  uint64 seq = 2;
+  string key = 3;
+  string value = 4;
+}
+
+message PutResponse {
+  uint64 raft_index = 1;
+}
+
+message GetRequest {
+  string key = 1;
+  bool linearizable = 2;
+}
+
+message GetResponse {
+  string value = 1;
+  bool found = 2;
+  uint64 applied_index = 3;
+}
+
+message ProposeBatchRequest {
+  string client_id = 1;
+  uint64 seq = 2;
+  FeatureBatch batch = 3;
+}
+
+message ProposeBatchResponse {
+  // False when the batch was a duplicate (its offset was already applied).
+  bool applied = 1;
+  uint64 raft_index = 2;
+}
+
+message GetPartitionStateRequest {
+  int32 partition = 1;
+}
+
+message PartitionState {
+  int32 partition = 1;
+  // -1 when nothing has been committed for this partition yet.
+  int64 to_offset = 2;
+  int64 max_event_time_ms = 3;
+  int64 closed_until_ms = 4;
+  int64 late_dropped_total = 5;
+  int64 events_total = 6;
+  repeated Bucket buckets = 7;
+}
+
+message GetZoneFeaturesRequest {
+  // Empty means all zones.
+  repeated int32 zones = 1;
+  bool linearizable = 2;
+}
+
+message GetZoneFeaturesResponse {
+  repeated ZoneFeatures features = 1;
+  uint64 applied_index = 2;
+}
+
+message StatusRequest {
+  // Also compute the state fingerprint (costs a pass over the state).
+  bool fingerprint = 1;
+}
+
+message StatusResponse {
+  NodeStatus status = 1;
+}
+
+message GetPartitionStateResponse {
+  PartitionState state = 1;
+}
+
+message PeerProgress {
+  uint64 id = 1;
+  uint64 match_index = 2;
+  uint64 next_index = 3;
+  bool recently_active = 4;
+}
+
+message NodeStatus {
+  uint64 id = 1;
+  string role = 2;
+  uint64 term = 3;
+  uint64 leader_id = 4;
+  uint64 commit_index = 5;
+  uint64 applied_index = 6;
+  uint64 last_log_index = 7;
+  uint64 snapshot_index = 8;
+  repeated PeerProgress peers = 9;
+  // Messages sent to each peer since start, keyed by peer id.
+  map<uint64, uint64> sent_to = 10;
+  // Kafka offset stored per partition.
+  map<int32, int64> partition_offsets = 11;
+  uint64 duplicate_batches_ignored = 12;
+  uint64 elections_started = 13;
+  int64 started_at_ms = 14;
+  uint64 snapshots_taken = 15;
+  uint64 snapshots_installed = 16;
+  // Hash of the full state machine at applied_index. Two nodes with the
+  // same applied_index must report the same fingerprint (no divergence).
+  string state_fingerprint = 17;
+}

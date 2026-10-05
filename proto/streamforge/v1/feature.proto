@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package streamforge.v1;
+
+option go_package = "github.com/sohamb17/streamforge/gen/streamforge/v1;sfv1";
+
+// FeatureService is the public serving API. A model (or the dashboard) asks
+// for the current feature vector of one or more entities.
+service FeatureService {
+  // GetFeatures returns the latest feature vector per entity.
+  // Callers must set a deadline; the server propagates it to Redis and to
+  // the Raft store, and returns DEADLINE_EXCEEDED rather than queueing.
+  rpc GetFeatures(GetFeaturesRequest) returns (GetFeaturesResponse);
+}
+
+enum ReadMode {
+  READ_MODE_UNSPECIFIED = 0;
+  // Served from the Redis cache when present (stale by at most the cache
+  // TTL), otherwise from the Raft leader with a linearizable ReadIndex read.
+  READ_MODE_BOUNDED_STALENESS = 1;
+  // Bypasses the cache. Always a linearizable ReadIndex read on the leader.
+  READ_MODE_LINEARIZABLE = 2;
+}
+
+message GetFeaturesRequest {
+  // Entity ids. For the zone_demand_v1 view these are NYC TLC zone ids
+  // ("1".."263").
+  repeated string entity_ids = 1;
+  // Feature view name. Only "zone_demand_v1" exists today.
+  string feature_view = 2;
+  ReadMode mode = 3;
+}
+
+message FeatureVector {
+  string entity_id = 1;
+  bool found = 2;
+  // End of the event-time window these values describe (exclusive).
+  int64 window_end_ms = 3;
+  // Every event with event time < as_of_event_time_ms is reflected.
+  int64 as_of_event_time_ms = 4;
+  // Named feature values, e.g. "trips_5m", "fare_mean_15m".
+  map<string, double> values = 5;
+}
+
+enum ServedFrom {
+  SERVED_FROM_UNSPECIFIED = 0;
+  SERVED_FROM_CACHE = 1;
+  SERVED_FROM_LEADER = 2;
+}
+
+message GetFeaturesResponse {
+  repeated FeatureVector features = 1;
+  ServedFrom served_from = 2;
+  // Upper bound on how stale the returned values can be relative to the
+  // committed state of the store (0 for linearizable reads).
+  int64 staleness_bound_ms = 3;
+}

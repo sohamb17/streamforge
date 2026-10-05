@@ -1,0 +1,6 @@
+data/
+!data/MANIFEST.md
+**/node_modules
+web/.vite
+bench/results/raw
+.git

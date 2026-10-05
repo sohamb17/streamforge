@@ -1,0 +1,4 @@
+# Keep LF endings so shell scripts run inside Linux containers on Windows hosts.
+* text=auto eol=lf
+*.parquet binary
+*.png binary

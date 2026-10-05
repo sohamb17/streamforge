@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package streamforge.v1;
+
+option go_package = "github.com/sohamb17/streamforge/gen/streamforge/v1;sfv1";
+
+// RaftTransport carries Raft messages between store nodes. Messages are
+// one-way: a response (for example an AppendEntries result) is just another
+// message sent back the other way. Lost messages are tolerated by Raft.
+service RaftTransportService {
+  rpc Send(SendRequest) returns (SendResponse);
+}
+
+message SendRequest {
+  repeated RaftMessage messages = 1;
+}
+
+message SendResponse {}
+
+message RaftEntry {
+  uint64 term = 1;
+  uint64 index = 2;
+  uint32 type = 3;
+  bytes data = 4;
+}
+
+message RaftSnapshot {
+  uint64 index = 1;
+  uint64 term = 2;
+  bytes data = 3;
+}
+
+message RaftMessage {
+  uint32 type = 1;
+  uint64 from = 2;
+  uint64 to = 3;
+  uint64 term = 4;
+  uint64 log_term = 5;
+  uint64 index = 6;
+  repeated RaftEntry entries = 7;
+  uint64 commit = 8;
+  bool reject = 9;
+  uint64 reject_hint = 10;
+  RaftSnapshot snapshot = 11;
+  bytes context = 12;
+}
