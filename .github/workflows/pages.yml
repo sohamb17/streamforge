@@ -35,7 +35,10 @@ jobs:
           GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o web/public/sim.wasm ./cmd/simwasm
           cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/public/
       - name: point at the live cluster, if any
-        run: echo '{ "liveUrl": "${{ vars.LIVE_URL }}" }' > web/public/config.json
+        env:
+          LIVE_URL: ${{ vars.LIVE_URL }}
+        run: |
+          printf '{ "liveUrl": "%s" }\n' "$LIVE_URL" > web/public/config.json
       - name: build the dashboard
         working-directory: web
         run: npm ci && npm run build
