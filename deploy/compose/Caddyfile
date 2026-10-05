@@ -1,0 +1,26 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Grafana serves itself from /grafana (GF_SERVER_SERVE_FROM_SUB_PATH).
+	handle /grafana* {
+		reverse_proxy grafana:3000
+	}
+
+	# Public, read-only feature lookups: /v1/features?zones=161,237
+	handle /v1/features {
+		reverse_proxy server:8081
+	}
+
+	# Dashboard, its event stream and the chaos API.
+	handle {
+		reverse_proxy console:8080 {
+			flush_interval -1
+		}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

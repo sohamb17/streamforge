@@ -1,0 +1,41 @@
+# Production overlay for a small public VM:
+#
+#   DOMAIN=203-0-113-7.sslip.io docker compose \
+#     -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.prod.yml up -d --build
+#
+# Only Caddy is reachable from the internet (80/443, automatic HTTPS). It
+# routes / and /api to the dashboard, /grafana to Grafana (anonymous
+# read-only), and /v1/features to the JSON endpoint of FeatureService.
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN, e.g. 203-0-113-7.sslip.io}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [console, grafana, server]
+
+  console:
+    ports: !reset []
+  grafana:
+    ports: !reset []
+    environment:
+      GF_SERVER_ROOT_URL: https://${DOMAIN}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}
+  kafka:
+    ports: !reset []
+  postgres:
+    ports: !reset []
+  prometheus:
+    ports: !reset []
+  server:
+    ports: !reset []
+
+volumes: { caddy_data: {}, caddy_config: {} }

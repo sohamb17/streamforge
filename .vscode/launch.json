@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Raft simulation tests (one seed, debuggable)",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}/internal/raftsim",
+      "args": ["-test.run", "TestRandomizedFaults/seed=1$", "-test.v"],
+      "env": { "RAFTSIM_SEEDS": "1" }
+    },
+    {
+      "name": "Window property tests",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}/internal/window",
+      "args": ["-test.v"]
+    },
+    {
+      "name": "Store node (single, local)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/storenode",
+      "args": ["-id", "1", "-peers", "1=localhost:7001", "-listen", ":7001", "-http", ":9101", "-data", "${workspaceFolder}/.local/raft1"]
+    },
+    {
+      "name": "Worker (against the compose Kafka, local store node)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/worker",
+      "args": ["-brokers", "localhost:29092", "-store", "1=localhost:7001", "-http", ":9113", "-group", "debug-workers", "-topic", "trips"]
+    },
+    {
+      "name": "FeatureService (local store node)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/server",
+      "args": ["-store", "1=localhost:7001", "-listen", ":50061", "-http", ":8091"]
+    }
+  ]
+}

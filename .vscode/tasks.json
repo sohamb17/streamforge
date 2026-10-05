@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "stack: up", "type": "shell", "command": "make up", "problemMatcher": [] },
+    { "label": "stack: down", "type": "shell", "command": "make down", "problemMatcher": [] },
+    { "label": "test: all", "type": "shell", "command": "go test ./...", "group": { "kind": "test", "isDefault": true }, "problemMatcher": ["$go"] },
+    { "label": "test: 1000 Raft fault schedules", "type": "shell", "command": "make test-raft", "problemMatcher": ["$go"] },
+    { "label": "test: mutation testing", "type": "shell", "command": "make mutation", "problemMatcher": [] },
+    { "label": "faults: run all scenarios", "type": "shell", "command": "make faults", "problemMatcher": [] },
+    { "label": "dashboard: dev server", "type": "shell", "command": "make web-dev", "isBackground": true, "problemMatcher": [] }
+  ]
+}

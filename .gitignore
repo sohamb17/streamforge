@@ -15,3 +15,11 @@ bench/results/raw/
 *.test
 *.out
 .env
+
+# Built from cmd/simwasm and GOROOT by `make wasm` / CI
+/web/public/sim.wasm
+/web/public/wasm_exec.js
+/.local/
+ml/model.joblib
+__pycache__/
+*.tsbuildinfo

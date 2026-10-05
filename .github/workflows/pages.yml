@@ -1,0 +1,54 @@
+# Publishes the dashboard to GitHub Pages. With no live cluster configured
+# it runs the in-browser simulation (the real Go code compiled to wasm).
+# Set the repository variable LIVE_URL (e.g. https://203-0-113-7.sslip.io/)
+# to make the page connect to a running deployment first.
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: build the simulator
+        run: |
+          GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o web/public/sim.wasm ./cmd/simwasm
+          cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/public/
+      - name: point at the live cluster, if any
+        run: echo '{ "liveUrl": "${{ vars.LIVE_URL }}" }' > web/public/config.json
+      - name: build the dashboard
+        working-directory: web
+        run: npm ci && npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
