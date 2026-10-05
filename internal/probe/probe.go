@@ -79,7 +79,7 @@ func Run(ctx context.Context, cfg Config, rec *Recorder) error {
 	var wg sync.WaitGroup
 	errc := make(chan error, cfg.Clients)
 	for i := 0; i < cfg.Clients; i++ {
-		cli, err := storeclient.New(cfg.Addrs, fmt.Sprintf("probe-%s-%d", cfg.KeyPrefix, i))
+		cli, err := storeclient.New(cfg.Addrs, fmt.Sprintf("%s/client-%d", cfg.KeyPrefix, i))
 		if err != nil {
 			return err
 		}
@@ -87,6 +87,7 @@ func Run(ctx context.Context, cfg Config, rec *Recorder) error {
 		wg.Add(1)
 		go func(id int, cli *storeclient.Client) {
 			defer wg.Done()
+			defer cli.Close()
 			rng := rand.New(rand.NewSource(cfg.Seed + int64(id)))
 			seq := 0
 			for ctx.Err() == nil {
@@ -168,6 +169,22 @@ type Result struct {
 	MaxWriteGapMs  float64 `json:"max_write_gap_ms"`
 	MaxWriteGapAt  float64 `json:"max_write_gap_starts_at_s"` // seconds since start
 	WriteGapsOver1 int     `json:"write_gaps_over_1s"`
+	// Closed-loop client latencies (each client waits for its previous op).
+	PutP50Ms   float64 `json:"put_p50_ms"`
+	PutP99Ms   float64 `json:"put_p99_ms"`
+	GetP50Ms   float64 `json:"get_p50_ms"`
+	GetP99Ms   float64 `json:"get_p99_ms"`
+	PutsPerSec float64 `json:"puts_per_sec"`
+	GetsPerSec float64 `json:"gets_per_sec"`
+}
+
+func pct(xs []float64, q float64) float64 {
+	if len(xs) == 0 {
+		return 0
+	}
+	sort.Float64s(xs)
+	i := int(q * float64(len(xs)-1))
+	return xs[i]
 }
 
 // Check runs Porcupine on the history and computes write availability.
@@ -176,7 +193,19 @@ func Check(rec *Recorder, timeout time.Duration) (Result, porcupine.Linearizatio
 	var r Result
 	r.Ops = len(ops)
 	var okWrites []int64
+	var putLat, getLat []float64
+	var lastRet int64
 	for _, o := range ops {
+		if o.RetNs > lastRet {
+			lastRet = o.RetNs
+		}
+		if !o.Unknown {
+			if o.Kind == "put" {
+				putLat = append(putLat, float64(o.RetNs-o.CallNs)/1e6)
+			} else {
+				getLat = append(getLat, float64(o.RetNs-o.CallNs)/1e6)
+			}
+		}
 		switch {
 		case o.Kind == "put" && o.Unknown:
 			r.PutsUnknown++
@@ -190,6 +219,12 @@ func Check(rec *Recorder, timeout time.Duration) (Result, porcupine.Linearizatio
 	rec.mu.Lock()
 	r.GetsFailed = rec.failedGets
 	rec.mu.Unlock()
+	r.PutP50Ms, r.PutP99Ms = pct(putLat, 0.5), pct(putLat, 0.99)
+	r.GetP50Ms, r.GetP99Ms = pct(getLat, 0.5), pct(getLat, 0.99)
+	if lastRet > 0 {
+		r.PutsPerSec = float64(r.PutsOK) / (float64(lastRet) / 1e9)
+		r.GetsPerSec = float64(r.GetsOK) / (float64(lastRet) / 1e9)
+	}
 	sort.Slice(okWrites, func(i, j int) bool { return okWrites[i] < okWrites[j] })
 	for i := 1; i < len(okWrites); i++ {
 		gap := float64(okWrites[i]-okWrites[i-1]) / 1e6

@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	sfv1 "github.com/sohamb17/streamforge/gen/streamforge/v1"
@@ -314,6 +315,10 @@ type proc struct {
 	acked    atomic.Int64
 	consumed atomic.Int64
 	hw       atomic.Int64
+
+	// Metric children resolved once; label lookups per event are costly.
+	cEvents, cDupSkipped, cGapSkipped prometheus.Counter
+	gLate, gWatermark                 prometheus.Gauge
 }
 
 func newProc(w *Worker, p int32, st *sfv1.PartitionState) *proc {
@@ -322,6 +327,12 @@ func newProc(w *Worker, p int32, st *sfv1.PartitionState) *proc {
 		in: make(chan []*kgo.Record, 64), done: make(chan commitResult, 1), redeliverc: make(chan int64, 1),
 		stopc: make(chan struct{}), stopped: make(chan struct{}),
 	}
+	pl := itoa(p)
+	pr.cEvents = mEvents.WithLabelValues(pl)
+	pr.cDupSkipped = mSkipped.WithLabelValues(pl, "duplicate")
+	pr.cGapSkipped = mSkipped.WithLabelValues(pl, "gap")
+	pr.gLate = mLateDropped.WithLabelValues(pl)
+	pr.gWatermark = mWatermark.WithLabelValues(pl)
 	pr.reset(st)
 	return pr
 }
@@ -354,6 +365,8 @@ func (pr *proc) run() {
 			for _, r := range recs {
 				pr.consume(r, pl)
 			}
+			pr.gLate.Set(float64(pr.win.LateDropped()))
+			pr.gWatermark.Set(float64(pr.win.Watermark()))
 		case res := <-pr.done:
 			pr.inflight = false
 			if res.err != nil {
@@ -377,7 +390,7 @@ func (pr *proc) run() {
 func (pr *proc) consume(r *kgo.Record, pl string) {
 	if pr.expect >= 0 && r.Offset != pr.expect {
 		if r.Offset < pr.expect {
-			mSkipped.WithLabelValues(pl, "duplicate").Inc()
+			pr.cDupSkipped.Inc()
 			return
 		}
 		// A gap means records from before a seek are still arriving; wait
@@ -387,7 +400,7 @@ func (pr *proc) consume(r *kgo.Record, pl string) {
 			pr.gapSince = time.Now()
 		}
 		if time.Since(pr.gapSince) < 10*time.Second {
-			mSkipped.WithLabelValues(pl, "gap").Inc()
+			pr.cGapSkipped.Inc()
 			return
 		}
 		pr.log.Error("offset gap persisted; accepting (data lost to retention?)", "expected", pr.expect, "got", r.Offset)
@@ -405,13 +418,11 @@ func (pr *proc) consume(r *kgo.Record, pl string) {
 		DistanceMilli: t.DistanceMilli, Offset: r.Offset, PublishMs: t.PublishMs,
 	}) {
 		// Already reflected in the window state (redelivery after a rewind).
-		mSkipped.WithLabelValues(pl, "duplicate").Inc()
+		pr.cDupSkipped.Inc()
 		return
 	}
 	pr.consumed.Store(r.Offset)
-	mEvents.WithLabelValues(pl).Inc()
-	mLateDropped.WithLabelValues(pl).Set(float64(pr.win.LateDropped()))
-	mWatermark.WithLabelValues(pl).Set(float64(pr.win.Watermark()))
+	pr.cEvents.Inc()
 }
 
 // commit writes the history rows, then proposes the batch. Runs on its own

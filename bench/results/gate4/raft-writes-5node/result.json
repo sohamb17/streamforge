@@ -1,0 +1,18 @@
+{
+  "ops": 206086,
+  "puts_ok": 103111,
+  "puts_unknown": 0,
+  "gets_ok": 102975,
+  "gets_failed": 0,
+  "linearizable": "ok",
+  "check_seconds": 0.361708511,
+  "max_write_gap_ms": 48.181954,
+  "max_write_gap_starts_at_s": 45.576875952,
+  "write_gaps_over_1s": 0,
+  "put_p50_ms": 8.6572,
+  "put_p99_ms": 24.59615,
+  "get_p50_ms": 8.140438,
+  "get_p99_ms": 23.94694,
+  "puts_per_sec": 1718.3006151937498,
+  "gets_per_sec": 1716.034233491833
+}

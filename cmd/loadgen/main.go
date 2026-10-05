@@ -131,13 +131,12 @@ func main() {
 	var lateSends int64
 	for i := int64(0); i < total; i++ {
 		intended := start.Add(time.Duration(i) * interval)
+		// Sleep, never spin: a busy-wait here burned a whole core and
+		// starved the system under test on a 2-vCPU host. Timer slack only
+		// delays the send; latency is still measured from `intended`, so
+		// any slack is counted against the server, not hidden.
 		if d := time.Until(intended); d > 0 {
-			if d > 2*time.Millisecond {
-				time.Sleep(d - time.Millisecond)
-			}
-			for time.Now().Before(intended) {
-				runtime.Gosched()
-			}
+			time.Sleep(d)
 		} else if -d > 10*time.Millisecond {
 			lateSends++ // the generator itself fell behind
 		}

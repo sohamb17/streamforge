@@ -8,13 +8,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 COMPOSE="docker compose -f deploy/compose/docker-compose.yml ${COMPOSE_EXTRA:-}"
 PROJECT=streamforge
-STORE_PEERS=1=storenode1:7000,2=storenode2:7000,3=storenode3:7000,4=storenode4:7000,5=storenode5:7000
+STORE_PEERS=${STORE_PEERS:-1=storenode1:7000,2=storenode2:7000,3=storenode3:7000,4=storenode4:7000,5=storenode5:7000}
 NODES="1 2 3 4 5"
 
 ctr() { echo "${PROJECT}-storenode$1-1"; }
 
 # node_status N -> JSON from the node's admin endpoint (empty if down).
-node_status() { docker exec "$(ctr "$1")" wget -qO- -T 2 localhost:9100/admin/status 2>/dev/null || true; }
+node_status() { docker exec "$(ctr "$1")" wget -qO- -T 2 "localhost:9100/admin/status?fingerprint=1" 2>/dev/null || true; }
 
 jget() { # jget '<json>' key  (flat numeric/string fields only)
   echo "$1" | tr ',{}' '\n\n\n' | grep -m1 "\"$2\":" | sed 's/.*://; s/"//g'

@@ -19,6 +19,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"strconv"
@@ -124,6 +125,7 @@ func main() {
 	from := flag.String("from", "", "only replay event time >= this (RFC3339)")
 	to := flag.String("to", "", "only replay event time < this (RFC3339)")
 	httpAddr := flag.String("http", ":9102", "metrics/admin address")
+	resume := flag.Bool("resume", false, "continue after the newest event already in the topic (keeps event time monotonic across restarts)")
 	flag.Parse()
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("svc", "replayer")
@@ -191,11 +193,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	if *resume {
+		last, err := lastEventTime(ctx, cl, *topic)
+		if err != nil {
+			log.Error("resume: read last event", "err", err)
+			os.Exit(1)
+		}
+		if last > 0 {
+			skipped := 0
+			if _, ok := s.(synthSource); ok {
+				s = synthSource{synth.New(synth.Config{Seed: *seed, Zipf: *zipf, EventsPerMinute: *synthRate, StartMs: last + 1})}
+			} else {
+				skipped = skipTo(s, last)
+			}
+			log.Info("resuming after the newest event in the topic", "event_time", time.UnixMilli(last).UTC().Format(time.RFC3339), "skipped", skipped)
+		}
+	}
+
 	var speedBits atomic.Uint64
 	speedBits.Store(math.Float64bits(*speedup))
 	mSpeed.Set(*speedup)
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	// POST /admin/speed?x=120 changes the event-time speed-up live.
 	mux.HandleFunc("/admin/speed", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -298,7 +319,7 @@ func ensureTopic(ctx context.Context, cl *kgo.Client, topic string, partitions i
 		if err == nil && resp.Err == nil {
 			return nil
 		}
-		if err == nil && errors.Is(resp.Err, kerr.TopicAlreadyExists) {
+		if errors.Is(err, kerr.TopicAlreadyExists) || errors.Is(resp.Err, kerr.TopicAlreadyExists) {
 			return nil
 		}
 		if attempt > 60 {
@@ -309,4 +330,63 @@ func ensureTopic(ctx context.Context, cl *kgo.Client, topic string, partitions i
 		}
 		time.Sleep(time.Second) // broker still starting
 	}
+}
+
+// lastEventTime returns the largest event time among the last record of
+// every partition (0 for an empty topic).
+func lastEventTime(ctx context.Context, cl *kgo.Client, topic string) (int64, error) {
+	ends, err := kadm.NewClient(cl).ListEndOffsets(ctx, topic)
+	if err != nil {
+		return 0, err
+	}
+	offs := map[int32]kgo.Offset{}
+	ends.Each(func(o kadm.ListedOffset) {
+		if o.Err == nil && o.Offset > 0 {
+			offs[o.Partition] = kgo.NewOffset().At(o.Offset - 1)
+		}
+	})
+	if len(offs) == 0 {
+		return 0, nil
+	}
+	cc, err := kgo.NewClient(kgo.SeedBrokers(cl.OptValue(kgo.SeedBrokers).([]string)...),
+		kgo.ConsumePartitions(map[string]map[int32]kgo.Offset{topic: offs}))
+	if err != nil {
+		return 0, err
+	}
+	defer cc.Close()
+	tctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	var max int64
+	seen := map[int32]bool{}
+	for len(seen) < len(offs) && tctx.Err() == nil {
+		cc.PollFetches(tctx).EachRecord(func(r *kgo.Record) {
+			seen[r.Partition] = true
+			if t, err := event.Decode(r.Value); err == nil && t.EventTimeMs > max {
+				max = t.EventTimeMs
+			}
+		})
+	}
+	return max, nil
+}
+
+// skipTo advances a source so its next event is later than t.
+func skipTo(s source, t int64) int {
+	switch ss := s.(type) {
+	case *sliceSource:
+		if len(ss.trips) == 0 {
+			return 0
+		}
+		base := ss.trips[0].EventTimeMs
+		if ss.loop && ss.loopShift > 0 && t >= base {
+			ss.loopN = (t - base) / ss.loopShift
+			mLoop.Set(float64(ss.loopN))
+		}
+		n := 0
+		for ss.i < len(ss.trips) && ss.trips[ss.i].EventTimeMs+ss.loopN*ss.loopShift <= t {
+			ss.i++
+			n++
+		}
+		return n
+	}
+	return 0
 }

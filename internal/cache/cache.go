@@ -7,6 +7,7 @@ package cache
 
 import (
 	"context"
+	"math/rand"
 	"strconv"
 	"time"
 
@@ -49,7 +50,9 @@ func (c *Cache) Get(ctx context.Context, zones []int32) (map[int32]*sfv1.ZoneFea
 	return out, nil
 }
 
-// Set stores rows with the TTL.
+// Set stores rows with the TTL. Each key gets TTL minus up to 20 %, so
+// keys written together do not all expire in the same instant (which made
+// every hot zone miss at once). The staleness bound stays TTL.
 func (c *Cache) Set(ctx context.Context, rows []*sfv1.ZoneFeatures) error {
 	pipe := c.R.Pipeline()
 	for _, f := range rows {
@@ -57,7 +60,8 @@ func (c *Cache) Set(ctx context.Context, rows []*sfv1.ZoneFeatures) error {
 		if err != nil {
 			return err
 		}
-		pipe.Set(ctx, key(f.Zone), b, c.TTL)
+		ttl := c.TTL - time.Duration(rand.Int63n(int64(c.TTL)/5+1))
+		pipe.Set(ctx, key(f.Zone), b, ttl)
 	}
 	_, err := pipe.Exec(ctx)
 	return err

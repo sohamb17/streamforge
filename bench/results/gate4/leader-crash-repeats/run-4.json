@@ -1,0 +1,8 @@
+[
+  {
+    "fault": "kill leader node 5",
+    "at_s": 11.772,
+    "write_unavailable_ms": 365.25060600000006,
+    "gap_start_s": 11.834106871
+  }
+]

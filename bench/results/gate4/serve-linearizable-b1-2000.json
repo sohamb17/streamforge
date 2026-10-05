@@ -1,0 +1,45 @@
+{
+  "achieved_send_rps": 2000.0081866335104,
+  "batch": 1,
+  "by_served_from": {
+    "SERVED_FROM_LEADER": {
+      "count": 120000,
+      "max_ms": 50.047,
+      "mean_ms": 7.277702291666673,
+      "p50_ms": 6.219,
+      "p90_ms": 12.463,
+      "p999_ms": 30.991,
+      "p99_ms": 22.191
+    }
+  },
+  "codes": {
+    "OK": 120000
+  },
+  "conns": 4,
+  "cpus": 2,
+  "deadline_ms": 100,
+  "duration_s": 60,
+  "errors_by_second": {},
+  "finished_at": "2026-10-05T08:19:17Z",
+  "host": "76d50e87f92c",
+  "label": "serve-linearizable-b1-2000",
+  "late_sends_10ms": 20,
+  "latency_from": "scheduled send time (coordinated-omission corrected)",
+  "max_inflight": 74,
+  "mode": "linearizable",
+  "open_loop": true,
+  "overall": {
+    "count": 120000,
+    "max_ms": 50.047,
+    "mean_ms": 7.277702291666673,
+    "p50_ms": 6.219,
+    "p90_ms": 12.463,
+    "p999_ms": 30.991,
+    "p99_ms": 22.191
+  },
+  "rate_rps": 2000,
+  "requests": 120000,
+  "target": "server:50051",
+  "warmup_s": 10,
+  "zipf": 1.2
+}

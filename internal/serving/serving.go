@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sync/singleflight"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -49,6 +50,8 @@ var (
 		Name: "streamforge_serving_requests_total", Help: "GetFeatures requests by gRPC code."}, []string{"code"})
 	mCache = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "streamforge_serving_cache_lookups_total", Help: "Per-entity cache lookups by result (hit, miss, error, bypassed)."}, []string{"result"})
+	mCoalesced = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "streamforge_serving_coalesced_reads_total", Help: "Cache misses served by another request's in-flight store read."})
 	mBreaker = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "streamforge_serving_cache_breaker_trips_total", Help: "Times the cache was bypassed after a Redis error."})
 )
@@ -68,6 +71,11 @@ type Server struct {
 	// request.
 	BreakerCooldown time.Duration
 	cacheOffUntil   atomic.Int64 // unix nanos
+
+	// flight coalesces concurrent store reads for the same set of missed
+	// zones: when a hot key expires, one request refills it and the others
+	// wait for that result instead of stampeding the Raft leader.
+	flight singleflight.Group
 }
 
 func (s *Server) cacheUsable() bool {
@@ -157,7 +165,13 @@ func (s *Server) GetFeatures(ctx context.Context, req *sfv1.GetFeaturesRequest) 
 		}
 	}
 	if len(misses) > 0 {
-		got, _, err := s.Store.ZoneFeatures(ctx, misses)
+		var got []*sfv1.ZoneFeatures
+		var err error
+		if useCache {
+			got, err = s.coalescedRead(ctx, misses)
+		} else {
+			got, _, err = s.Store.ZoneFeatures(ctx, misses)
+		}
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				return nil, status.Error(codes.DeadlineExceeded, "store read did not finish before the deadline")
@@ -205,6 +219,37 @@ func (s *Server) GetFeatures(ctx context.Context, req *sfv1.GetFeaturesRequest) 
 		resp.Features = append(resp.Features, fv)
 	}
 	return resp, nil
+}
+
+// coalescedRead shares one linearizable store read among concurrent cache
+// misses for the same zones. Every waiter still gets a value that was
+// committed when the shared read started, which is within the bounded
+// staleness these (cache-mode) requests already accept.
+func (s *Server) coalescedRead(ctx context.Context, zones []int32) ([]*sfv1.ZoneFeatures, error) {
+	key := make([]byte, 0, len(zones)*4)
+	for _, z := range zones {
+		key = strconv.AppendInt(key, int64(z), 10)
+		key = append(key, ',')
+	}
+	ch := s.flight.DoChan(string(key), func() (any, error) {
+		// Detached from any one caller's cancellation, bounded by the cap.
+		rctx, cancel := context.WithTimeout(context.Background(), s.MaxDeadline)
+		defer cancel()
+		got, _, err := s.Store.ZoneFeatures(rctx, zones)
+		return got, err
+	})
+	select {
+	case r := <-ch:
+		if r.Shared {
+			mCoalesced.Inc()
+		}
+		if r.Err != nil {
+			return nil, r.Err
+		}
+		return r.Val.([]*sfv1.ZoneFeatures), nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func modeLabel(m sfv1.ReadMode) string {
