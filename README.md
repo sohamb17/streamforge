@@ -107,7 +107,7 @@ proto/ gen/    gRPC contracts and generated code
 deploy/        Docker Compose (local, production overlay with Caddy), Prometheus, Grafana, SQL
 faults/        fault-injection scenarios        bench/  load generator scripts and all recorded results
 web/           dashboard                         ml/     small scikit-learn consumer of the features
-docs/          WALKTHROUGH.md (design and interview notes), DEPLOY.md
+docs/          WALKTHROUGH.md (design notes), DEPLOY.md
 ```
 
 ## Honest scope
@@ -116,7 +116,7 @@ docs/          WALKTHROUGH.md (design and interview notes), DEPLOY.md
   etcd, DynamoDB or Cassandra. Membership is fixed at five nodes; there is no leadership transfer.
 - Delivery is **at-least-once with idempotent application**, which gives effectively-once effects on the online
   store. It is not end-to-end exactly-once: the Postgres history and the cache sit outside the Raft entry
-  (see the [walkthrough](docs/WALKTHROUGH.md#4-delivery-semantics-the-core-of-the-interview-story)).
+  (see the [walkthrough](docs/WALKTHROUGH.md#4-delivery-semantics)).
 - Cached reads are bounded-staleness, never linearizable.
 - Numbers come from one shared 2-vCPU machine and say so; they are not production SLOs.
 

@@ -1,10 +1,8 @@
 # StreamForge walkthrough
 
-This is the guide to owning this codebase: where everything is, why it is
-built the way it is, and how to answer the questions an interviewer will
-ask, each answer pointing at a test, a log or a measurement in the repo.
-Read it with the code open. The exercises at the end are the fastest way
-to make it yours.
+A guided tour of the codebase: where everything is, why it is built the way
+it is, and which test, log or measurement backs each design decision. Read
+it with the code open.
 
 ## 1. The 60-second version
 
@@ -86,7 +84,7 @@ defended?
    (`window.Derive`), caches them for 2 s and answers with `as_of_event_time`
    and the staleness bound.
 
-## 4. Delivery semantics (the core of the interview story)
+## 4. Delivery semantics
 
 The rule, from the Kafka design docs: when a consumer writes to an external
 system, store the consumer position *with* the output. StreamForge does it
@@ -246,7 +244,7 @@ is what makes deterministic simulation possible.
   (`bench/results/ENVIRONMENT.md`). Re-run `bench/gate4.sh` on your own
   machine before quoting a number for it.
 
-## 9. Bugs found along the way (good interview stories)
+## 9. Bugs found along the way
 
 1. **Kafka retention ate the replay.** Records carried the March 2026
    event time as their Kafka timestamp; time-based retention (72 h) deleted
@@ -286,78 +284,7 @@ is what makes deterministic simulation possible.
    but it is why each scenario writes its own `events.txt` and why the
    summary is generated from files, not from console output.
 
-## 10. Interview questions, with pointers
-
-**Why not Redis replication or etcd?** A production team would use etcd,
-DynamoDB or Cassandra for the online store. Raft is implemented here to
-own replication end to end, then tested with randomized simulation,
-mutation testing and real partitions, and measured against a single node
-to show what replication costs (REPORT.md section 4). It is a
-learning and evidence choice, not a claim that custom consensus is the
-right production decision.
-
-**What happens to a write the leader accepted but had not replicated when
-it crashed?** It is not committed, and the client never got an OK. Two
-cases: a new leader that has the entry commits it (by committing a no-op of
-its own term); a new leader without it overwrites it. The client sees a
-timeout or "outcome unknown" and retries with the same `(client id,
-sequence)` (or the same Kafka offset for batches), so whichever happened,
-the effect is applied once. `ErrUnknownOutcome` in `raftnode/node.go`,
-`storeclient.call`, `TestRandomizedFaults` (workers re-propose blindly).
-
-**How do you avoid double counting after a worker restart?** The offset is
-stored in the same Raft entry as the output and the window state; restart
-resumes from it, and anything at or below it is ignored. Gate 1: 4 kills,
-0 mismatches; `faults/worker-crash.sh`: duplicates ignored, 0 mismatches.
-
-**What does a read return during a partition, and from which side?**
-Linearizable reads only succeed on the majority side's leader. The minority
-side's old leader steps down within an election timeout (CheckQuorum), and
-even before that its ReadIndex cannot get a majority of heartbeat acks, so
-it cannot answer. Cached reads may be served stale from Redis, labelled
-with the TTL bound. Evidence: `faults/partition.sh` (minority commit index
-unchanged, history linearizable), `TestDeposedLeaderCannotServeStaleReads`,
-and the negative control.
-
-**How do you measure p99 without coordinated omission?** Open-loop
-`loadgen`, latency from the scheduled send time, plus in-flight counts.
-
-**How do you know training features match serving features?** One
-transformation (`window`) feeds both; means are derived from integer sums by
-one function on each side (`window.Derive`, `ml/features.py`). Parity:
-294,543 history rows equal a backfill from offset 0; skew: 300 of 300
-online reads equal the point-in-time join (`bench/results/gate3/`).
-
-**What is the bottleneck at peak throughput, and how did you find it?**
-With real-time event pacing, the ingest path scaled past the rates tested
-on 2 vCPUs (see REPORT.md); the replayer and the Kafka broker used the most
-CPU. With the time-compressed real data, the commit path is the limit:
-every closed window becomes rows in Raft and Postgres; Postgres CPU climbs
-with rows per second and freshness rises as the worker's adaptive batches
-grow, while lag stays flat. Found with per-container CPU accounting in
-`bench measure` and the pprof endpoints (`/debug/pprof/`).
-
-**How do late events change a window that was already served?** Section 5.
-
-## 11. What you can claim, and what not
-
-Claim only what the recorded runs show, with their conditions:
-
-- Built a Raft-replicated online feature store in Go (5 nodes, Raft written
-  from scratch); verified linearizable reads and writes with Porcupine on
-  recorded histories under SIGKILLed and paused leaders and iptables
-  partitions, plus 1,500 randomized simulated fault schedules.
-- Made Kafka consumption effectively-once by committing source offsets and
-  window state atomically with feature updates in the replicated state
-  machine; replays and crash recovery reproduced identical features.
-- Numbers from `bench/results/gate4/REPORT.md` with hardware, concurrency and
-  duration attached.
-
-Do not claim: end-to-end exactly-once; production uptime or SLOs;
-linearizable serving through the cache; a novel consensus algorithm; ML in
-production; Kubernetes; any number without its conditions.
-
-## 12. Known limitations and next steps
+## 10. Known limitations and next steps
 
 - Fixed membership (no joint consensus); no leadership transfer.
 - Snapshots are sent whole; fine for a small state, not for gigabytes.
@@ -374,16 +301,3 @@ production; Kubernetes; any number without its conditions.
 - The worker writes history rows before proposing; a crashed worker can
   leave rows for windows that commit later (identical values, verified by
   `conflicting_rewrites`), so the history can briefly be ahead of the store.
-
-## 13. Exercises (do these yourself)
-
-1. Change the lateness allowance to 10 s in `cmd/worker` flags, rerun
-   `scripts/gate1.sh`, and predict `late_dropped` before looking.
-2. Delete the `t != c.term` check in `maybeCommit` and run
-   `RAFTSIM_SEEDS=300 go test ./internal/raftsim -run HeavyChurn`. Then write
-   a *targeted* test that reproduces Figure 8 deterministically.
-3. Turn off fsync (`storenode -fsync=false`) and compare Raft commit latency
-   in Grafana. What guarantee did you just give up?
-4. Add a `trips_15m` feature end to end: window, proto, Derive, UI.
-5. Implement leadership transfer (`TimeoutNow`) and use it before a planned
-   restart.
